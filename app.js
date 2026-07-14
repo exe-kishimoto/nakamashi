@@ -482,8 +482,9 @@
       ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI * 2); ctx.fill();
     }
     // 窓（アスペクト補正済みなので px 等倍＝実寸比）
-    if (style === "circle") drawRoundWindow(ctx, S_W * 0.5, S_H * 0.5, S_H * 0.25);
-    else if (style === "fan") drawFanWindow(ctx, S_W * 0.5, S_H * 0.68, S_H * 0.36);
+    // 窓は下寄せ（三角と壁の境目付近）
+    if (style === "circle") drawRoundWindow(ctx, S_W * 0.5, S_H * 0.78, S_H * 0.2);
+    else if (style === "fan") drawFanWindow(ctx, S_W * 0.5, S_H * 0.82, S_H * 0.34);
     // 蔦（右妻に多め）
     for (var i = 0; i < 6; i++) {
       var vx = rand(0, S_W), vy = rand(S_H * 0.5, S_H), vr = rand(50, 130);
@@ -901,9 +902,9 @@
   addClerestory(-SHED_HW);
   addClerestory(SHED_HW);
 
-  // 正面から見て「左＝丸窓 / 右＝大アーチ窓」になるよう配置（+x が画面左に写るため FR=丸窓）
-  var gableFL = makeGableTriTexture("fan", false, 0.6);
-  var gableFR = makeGableTriTexture("circle", true, 0.55);
+  // 丸窓とアーチ窓を左右入れ替え（画面左＝アーチ / 画面右＝丸窓）。+x が画面左に写る
+  var gableFL = makeGableTriTexture("circle", false, 0.6);
+  var gableFR = makeGableTriTexture("fan", true, 0.55);
   var gableBL = makeGableTriTexture("plain", false, 0.25);
   var gableBR = makeGableTriTexture("plain", true, 0.25);
 
