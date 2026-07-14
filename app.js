@@ -187,45 +187,58 @@
   }
 
   // 大きな半円のファン窓（実物の右妻面の窓）。cx=中心x, baseY=半円の下端y, R=半径
+  // 大きな半円窓（理想: 赤レンガの迫石アーチ＋クリームのインフィル）
   function drawFanWindow(ctx, cx, baseY, R) {
     ctx.save();
-    var rw = R * 1.5, rh = R * 0.85, rx = cx - rw / 2, ry = baseY;
-    // 石の縁取り（半円＋下部矩形）
-    ctx.fillStyle = "#cfc0a0";
-    ctx.beginPath();
-    ctx.arc(cx, baseY, R + 18, Math.PI, 2 * Math.PI);
-    ctx.lineTo(cx + R + 18, baseY);
-    ctx.rect(rx - 16, ry, rw + 32, rh + 14);
-    ctx.fill();
-    // 半円ガラス
-    ctx.fillStyle = "#d7dee4";
+    var outerR = R + Math.max(20, R * 0.2);
+    // 赤レンガの放射迫石
+    var seg = 18;
+    for (var i = 0; i < seg; i++) {
+      var a0 = Math.PI + Math.PI * i / seg, a1 = Math.PI + Math.PI * (i + 1) / seg;
+      ctx.beginPath();
+      ctx.arc(cx, baseY, outerR, a0, a1);
+      ctx.arc(cx, baseY, R, a1, a0, true);
+      ctx.closePath();
+      ctx.fillStyle = (i % 2 === 0) ? "#a0492f" : "#8c3f28";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(216,204,174,0.75)"; ctx.lineWidth = 2; ctx.stroke();
+    }
+    // クリームのインフィル（板張り/漆喰）
+    ctx.fillStyle = "#e7ddc4";
     ctx.beginPath(); ctx.arc(cx, baseY, R, Math.PI, 2 * Math.PI); ctx.closePath(); ctx.fill();
-    // 下部の格子窓
-    ctx.fillStyle = "#c6cfd2"; ctx.fillRect(rx, ry, rw, rh);
-    // 汚れ・退色
-    var gg = ctx.createLinearGradient(0, baseY - R, 0, baseY + rh);
-    gg.addColorStop(0, "rgba(120,130,120,0.30)");
-    gg.addColorStop(1, "rgba(90,100,90,0.10)");
+    // 退色ムラ
+    var gg = ctx.createLinearGradient(0, baseY - R, 0, baseY);
+    gg.addColorStop(0, "rgba(150,140,110,0.28)");
+    gg.addColorStop(1, "rgba(120,110,86,0.08)");
     ctx.fillStyle = gg;
     ctx.beginPath(); ctx.arc(cx, baseY, R, Math.PI, 2 * Math.PI); ctx.closePath(); ctx.fill();
-    ctx.fillRect(rx, ry, rw, rh);
-    // 放射マリオン（半円）
-    ctx.strokeStyle = "rgba(90,92,84,0.8)"; ctx.lineWidth = 4;
+    // 放射マリオン（薄く）
+    ctx.strokeStyle = "rgba(120,108,84,0.5)"; ctx.lineWidth = 3;
     for (var a = 1; a < 8; a++) {
       var ang = Math.PI + Math.PI * a / 8;
-      ctx.beginPath();
-      ctx.moveTo(cx, baseY);
-      ctx.lineTo(cx + Math.cos(ang) * R, baseY + Math.sin(ang) * R);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, baseY);
+      ctx.lineTo(cx + Math.cos(ang) * R, baseY + Math.sin(ang) * R); ctx.stroke();
     }
-    // 同心アーチ
-    [0.4, 0.72].forEach(function (f) {
-      ctx.beginPath(); ctx.arc(cx, baseY, R * f, Math.PI, 2 * Math.PI); ctx.stroke();
-    });
-    // 下部格子の桟
+    // 起拱線（下端の石）
+    ctx.strokeStyle = "#cdba95"; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(cx - outerR, baseY); ctx.lineTo(cx + outerR, baseY); ctx.stroke();
+    ctx.restore();
+  }
+
+  // 丸窓（理想: クリーム石の輪＋緑ガラス＋十字桟）。真円（アスペクト補正済みキャンバス前提）
+  function drawRoundWindow(ctx, cx, cy, R) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, R * 1.18, 0, Math.PI * 2);
+    ctx.fillStyle = "#ddd0b2"; ctx.fill();       // 石の輪
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fillStyle = "#33544a"; ctx.fill();       // 緑ガラス
+    var gr = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.3, 0, cx, cy, R);
+    gr.addColorStop(0, "rgba(150,185,170,0.25)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(225,232,222,0.6)"; ctx.lineWidth = Math.max(2, R * 0.06);
     ctx.beginPath();
-    for (var mi = 1; mi < 4; mi++) { ctx.moveTo(rx + rw * mi / 4, ry); ctx.lineTo(rx + rw * mi / 4, ry + rh); }
-    ctx.moveTo(rx, ry + rh / 2); ctx.lineTo(rx + rw, ry + rh / 2);
+    ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy);
+    ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R);
     ctx.stroke();
     ctx.restore();
   }
@@ -247,7 +260,7 @@
     var door = opts.door || null;
     var wallId = opts.wallId || null;
 
-    ctx.fillStyle = "#3d362e";
+    ctx.fillStyle = "#d8ccae"; // 目地はクリーム色（理想の赤レンガ＋明るい目地）
     ctx.fillRect(0, 0, cw, ch);
     bctx.fillStyle = "#2a2a2a"; // 目地 = 凹
     bctx.fillRect(0, 0, cw, ch);
@@ -281,10 +294,11 @@
         if (x >= cw) break;
         var bw = brickW - mortar, bh = brickH - mortar;
         var p = Math.random(), color;
-        if (p < 0.5) color = hsl(11 + rand(-6, 6), 44 + rand(-8, 8), 33 + rand(-7, 10));
-        else if (p < 0.72) color = hsl(30 + rand(-8, 8), 22 + rand(-6, 10), 58 + rand(-10, 12));
-        else if (p < 0.88) color = hsl(18 + rand(-6, 6), 16 + rand(-5, 5), 22 + rand(-6, 6));
-        else color = hsl(38, 14, 74);
+        // 暖色の赤レンガ主体（理想画像準拠）: 赤 / 明るい橙 / 深い赤 / バフ
+        if (p < 0.5) color = hsl(13 + rand(-5, 5), 54 + rand(-8, 8), 45 + rand(-6, 7));
+        else if (p < 0.74) color = hsl(22 + rand(-6, 6), 46 + rand(-8, 8), 56 + rand(-7, 8));
+        else if (p < 0.9) color = hsl(9 + rand(-4, 4), 50 + rand(-6, 6), 35 + rand(-6, 6));
+        else color = hsl(36 + rand(-6, 6), 30 + rand(-6, 6), 70 + rand(-6, 6));
         var bx0 = x + mortar / 2, by0 = y + mortar / 2;
         ctx.fillStyle = color;
         ctx.fillRect(bx0, by0, bw, bh);
@@ -433,19 +447,22 @@
   // 妻壁テクスチャ
   // ---------------------------------------------------------------
   function makeGableTriTexture(style, mirror, plaster) {
-    var S = 768;
-    var c = makeCanvas(S, S);
+    // キャンバスのアスペクトを三角形の外接矩形(幅=SHED_HW*2, 高=ROOF_H)に合わせる → 丸窓が真円になる
+    var S_W = 768;
+    var S_H = Math.max(280, Math.round(S_W * ROOF_H / (SHED_HW * 2)));
+    var c = makeCanvas(S_W, S_H);
     var ctx = c.getContext("2d");
-    ctx.fillStyle = "#3d362e"; ctx.fillRect(0, 0, S, S);
+    ctx.fillStyle = "#d8ccae"; ctx.fillRect(0, 0, S_W, S_H);  // クリーム目地
     var bw = BRICK_W_M * PX_PER_M, bh = BRICK_H_M * PX_PER_M, mort = MORTAR_M * PX_PER_M;
-    for (var r = 0; r * bh < S; r++) {
-      var y = S - (r + 1) * bh;
+    for (var r = 0; r * bh < S_H; r++) {
+      var y = S_H - (r + 1) * bh;
       var offset = (r % 2 === 0) ? 0 : bw / 2;
-      for (var x = -offset; x < S; x += bw) {
+      for (var x = -offset; x < S_W; x += bw) {
         var p = Math.random(), color;
-        if (p < 0.5) color = hsl(11 + rand(-6, 6), 44 + rand(-8, 8), 33 + rand(-7, 10));
-        else if (p < 0.72) color = hsl(30 + rand(-8, 8), 22, 58);
-        else color = hsl(18, 16, 24);
+        if (p < 0.5) color = hsl(13 + rand(-5, 5), 54 + rand(-8, 8), 45 + rand(-6, 7));
+        else if (p < 0.74) color = hsl(22 + rand(-6, 6), 46, 56);
+        else if (p < 0.9) color = hsl(9 + rand(-4, 4), 50, 35);
+        else color = hsl(36, 30, 70);
         ctx.fillStyle = color;
         ctx.fillRect(x + mort, y + mort, bw - mort * 2, bh - mort * 2);
         ctx.fillStyle = "rgba(255,244,228,0.12)";
@@ -454,43 +471,40 @@
         ctx.fillRect(x + mort, y + (bh - mort) * 0.78, bw - mort * 2, (bh - mort) * 0.22);
       }
     }
-    var blotches = Math.round((plaster || 0) * 70);
+    var blotches = Math.round((plaster || 0) * 40);
     for (var bl = 0; bl < blotches; bl++) {
-      var bx = rand(0, S), by = rand(0, S), rr = rand(40, 160);
+      var bx = rand(0, S_W), by = rand(0, S_H), rr = rand(40, 130);
       var g = ctx.createRadialGradient(bx, by, rr * 0.15, bx, by, rr);
-      var a = rand(0.35, 0.75);
-      g.addColorStop(0, "rgba(224,212,186," + a + ")");
-      g.addColorStop(1, "rgba(224,212,186,0)");
+      var a = rand(0.3, 0.65);
+      g.addColorStop(0, "rgba(226,214,188," + a + ")");
+      g.addColorStop(1, "rgba(226,214,188,0)");
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI * 2); ctx.fill();
     }
-    if (style === "circle") drawWindow(ctx, 384 - 110, 345, 220, 220, "circle");
-    else if (style === "fan") drawFanWindow(ctx, 384, 470, 205);
-    for (var i = 0; i < 8; i++) {
-      var vx = rand(0, S), vy = rand(380, S), vr = rand(70, 190);
+    // 窓（アスペクト補正済みなので px 等倍＝実寸比）
+    if (style === "circle") drawRoundWindow(ctx, S_W * 0.5, S_H * 0.5, S_H * 0.25);
+    else if (style === "fan") drawFanWindow(ctx, S_W * 0.5, S_H * 0.68, S_H * 0.36);
+    // 蔦（右妻に多め）
+    for (var i = 0; i < 6; i++) {
+      var vx = rand(0, S_W), vy = rand(S_H * 0.5, S_H), vr = rand(50, 130);
       var vg = ctx.createRadialGradient(vx, vy, 0, vx, vy, vr);
       vg.addColorStop(0, "rgba(44,74,32,0.5)"); vg.addColorStop(1, "rgba(44,74,32,0)");
       ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(vx, vy, vr, 0, Math.PI * 2); ctx.fill();
     }
+    // 破風の石帯＋歯飾り（両スロープ）
     function drawRake(x1, y1, x2, y2) {
-      ctx.strokeStyle = "#cfc2a8";
-      ctx.lineWidth = 16;
+      ctx.strokeStyle = "#e0d4b6"; ctx.lineWidth = 13;
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-      var steps = 13;
+      var steps = 12, nx = -(y2 - y1), ny = (x2 - x1), nl = Math.hypot(nx, ny);
+      nx /= nl; ny /= nl;
       for (var t = 1; t < steps; t++) {
-        var f = t / steps;
-        ctx.fillStyle = "#c4b696";
-        ctx.fillRect(x1 + (x2 - x1) * f - 7, y1 + (y2 - y1) * f + 10, 14, 14);
+        var f = t / steps, px = x1 + (x2 - x1) * f, py = y1 + (y2 - y1) * f;
+        ctx.fillStyle = "#9c4a30";
+        ctx.fillRect(px + nx * 10 - 6, py + ny * 10 - 6, 12, 12);
       }
     }
-    var valleyY = (1 - 0.15) * S;
-    if (!mirror) {
-      drawRake(0, S, S / 2, 0);
-      drawRake(S / 2, 0, S, valleyY);
-    } else {
-      drawRake(S, S, S / 2, 0);
-      drawRake(S / 2, 0, 0, valleyY);
-    }
+    drawRake(0, S_H, S_W / 2, 0);
+    drawRake(S_W / 2, 0, S_W, S_H);
     var tex = new THREE.CanvasTexture(c);
     tex.encoding = THREE.sRGBEncoding;
     tex.anisotropy = MAX_ANISO;
@@ -732,7 +746,7 @@
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.15;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
@@ -751,9 +765,9 @@
   skyDome.userData.shadow = "none";
   scene.add(skyDome);
 
-  scene.add(new THREE.HemisphereLight(0xc4d8e4, 0x50452f, 0.85));
-  var sun = new THREE.DirectionalLight(0xfff3e2, 1.15);
-  sun.position.set(45, 70, -35);
+  scene.add(new THREE.HemisphereLight(0xcfe0ea, 0x5a4c34, 0.72));
+  var sun = new THREE.DirectionalLight(0xffeecb, 1.45);
+  sun.position.set(38, 60, -30);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.left = -55;
@@ -800,8 +814,8 @@
   // ---------------------------------------------------------------
   var SHED_HW = 4.6;
   var BUILD_LEN = 36;
-  var WALL_H = 6.0;
-  var ROOF_H = 4.4;
+  var WALL_H = 7.6;          // 壁を高く（理想はもっと縦長）
+  var ROOF_H = 5.2;          // 妻を急・大きく
   var VALLEY_H = WALL_H + ROOF_H * 0.15;
   var TOTAL_W = SHED_HW * 4;
   var APEX_Y = WALL_H + ROOF_H;
@@ -821,13 +835,13 @@
 
   var texEast = makeBrickWallTexture({
     wallId: "east", realW: BUILD_LEN, realH: WALL_H,
-    windows: makeLongWallWindows(), nameProb: 0.06, ivyDensity: 12, plaster: 0.15
+    windows: makeLongWallWindows(), nameProb: 0.06, ivyDensity: 12, plaster: 0.12
   });
   var texWest = makeBrickWallTexture({
     wallId: "west", realW: BUILD_LEN, realH: WALL_H,
     windows: makeLongWallWindows(), nameProb: 0.06, ivyDensity: 40, plaster: 0.1
   });
-  // 正面（妻面下部）: 白漆喰の剥がれた壁。中央に扉、左下(=+x側=画面左)に小窓
+  // 正面（妻面下部）: 赤レンガ主体。中央に扉、左下(=+x側=画面左)に小窓
   var texFront = makeBrickWallTexture({
     wallId: "front", realW: TOTAL_W, realH: WALL_H,
     windows: [
@@ -835,14 +849,14 @@
       { cxFrac: 0.31, topFrac: 0.54, wFrac: 0.05, hFrac: 0.28, style: "smallarch" }
     ],
     door: { cxFrac: 0.5, wFrac: 0.075, hFrac: 0.42 },
-    nameProb: 0.05, ivyDensity: 10, plaster: 0.96,
+    nameProb: 0.05, ivyDensity: 12, plaster: 0.16,
     featured: [{ y_m: 1.5, xFrac: 0.66, donor: FEATURED_EXEMATE }]
   });
   var texBack = makeBrickWallTexture({
     wallId: "back", realW: TOTAL_W, realH: WALL_H,
-    windows: [], nameProb: 0.05, ivyDensity: 25, plaster: 0.3
+    windows: [], nameProb: 0.05, ivyDensity: 25, plaster: 0.14
   });
-  var flatBrick = new THREE.MeshStandardMaterial({ color: 0x51473b, roughness: 0.95 });
+  var flatBrick = new THREE.MeshStandardMaterial({ color: 0x8a4a30, roughness: 0.95 });
 
   function wallMat(t) {
     return new THREE.MeshStandardMaterial({ map: t.map, bumpMap: t.bump, bumpScale: 0.25, roughness: 0.95 });
@@ -906,15 +920,16 @@
   addGableTri(SHED_HW * 2, SHED_HW, BUILD_LEN, gableBR);
 
   // 妻壁の谷部と壁上端(WALL_H)の間にできる三角の隙間を塞ぐ（前後）
-  var gableFillMat = new THREE.MeshStandardMaterial({ color: 0xbdb29b, roughness: 0.95, side: THREE.DoubleSide });
+  var gableFillMat = new THREE.MeshStandardMaterial({ color: 0xb0674a, roughness: 0.95, side: THREE.DoubleSide });
   [0, BUILD_LEN].forEach(function (z) {
     buildingGroup.add(makeTriMesh(
       [-SHED_HW * 2, WALL_H, z], [SHED_HW * 2, WALL_H, z], [0, VALLEY_H, z],
       gableFillMat, [0, 0], [1, 0], [0.5, 1]));
   });
 
-  var pilasterMat = new THREE.MeshStandardMaterial({ color: 0x7a6350, roughness: 0.9 });
-  var capMat = new THREE.MeshStandardMaterial({ color: 0xcfc2a8, roughness: 0.85 });
+  // 理想準拠: 柱はクリーム色の本体＋赤レンガの頭(キャップ)
+  var pilasterMat = new THREE.MeshStandardMaterial({ color: 0xd7cdb6, roughness: 0.9 });
+  var capMat = new THREE.MeshStandardMaterial({ color: 0x9c4a30, roughness: 0.85 });
   function addPilaster(x, z, h) {
     var p = new THREE.Mesh(new THREE.BoxGeometry(1.1, h, 1.1), pilasterMat);
     p.position.set(x, h / 2, z);
@@ -1535,7 +1550,7 @@
     addMonitor(AD_RX, AD_ZS[ai], -Math.PI / 2, AD_W, AD_H, makeImageScreenMat(IMAGE_FILES[ai], ai), "静止画広告 " + (ai + 1));
   }
 
-  addSignboard(20, -24, -Math.PI / 2, ["PROJECT", "遠賀川水源地ポンプ室", "メタバース保存プロジェクト", "プロトタイプ v0.9"], "#6c3483");
+  addSignboard(20, -24, -Math.PI / 2, ["PROJECT", "遠賀川水源地ポンプ室", "メタバース保存プロジェクト", "プロトタイプ v1.0"], "#6c3483");
 
   // ---------------------------------------------------------------
   // 影の一括設定
