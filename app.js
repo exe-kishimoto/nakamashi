@@ -827,13 +827,16 @@
     wallId: "west", realW: BUILD_LEN, realH: WALL_H,
     windows: makeLongWallWindows(), nameProb: 0.06, ivyDensity: 40, plaster: 0.1
   });
-  // 正面（妻面下部）: 白漆喰主体で、大きなアーチ貨物扉（実物のシンプルな外観）
+  // 正面（妻面下部）: 白漆喰の剥がれた壁。中央に扉、左下(=+x側=画面左)に小窓
   var texFront = makeBrickWallTexture({
     wallId: "front", realW: TOTAL_W, realH: WALL_H,
-    windows: [],
-    door: { cxFrac: 0.27, wFrac: 0.17, hFrac: 0.72 },
-    nameProb: 0.05, ivyDensity: 6, plaster: 0.95,
-    featured: [{ y_m: 1.5, xFrac: 0.62, donor: FEATURED_EXEMATE }]
+    windows: [
+      { cxFrac: 0.24, topFrac: 0.54, wFrac: 0.05, hFrac: 0.28, style: "smallarch" },
+      { cxFrac: 0.31, topFrac: 0.54, wFrac: 0.05, hFrac: 0.28, style: "smallarch" }
+    ],
+    door: { cxFrac: 0.5, wFrac: 0.14, hFrac: 0.62 },
+    nameProb: 0.05, ivyDensity: 10, plaster: 0.96,
+    featured: [{ y_m: 1.5, xFrac: 0.66, donor: FEATURED_EXEMATE }]
   });
   var texBack = makeBrickWallTexture({
     wallId: "back", realW: TOTAL_W, realH: WALL_H,
@@ -917,6 +920,23 @@
   addPilaster(-TOTAL_W / 2, BUILD_LEN - 0.05, WALL_H + 0.7);
   addPilaster(TOTAL_W / 2, BUILD_LEN - 0.05, WALL_H + 0.7);
 
+  // 正面中央（谷部）のピア: 上部のみ・壁面とほぼ面一。頂部に石帽子＋小煙突（実物準拠）
+  (function addCenterPier() {
+    var y0 = WALL_H - 1.4, y1 = VALLEY_H + 0.5, zc = 0.05;
+    var pier = new THREE.Mesh(new THREE.BoxGeometry(1.05, y1 - y0, 0.3), pilasterMat);
+    pier.position.set(0, (y0 + y1) / 2, zc);
+    buildingGroup.add(pier);
+    var cap = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.24, 0.5), capMat);
+    cap.position.set(0, y1 + 0.12, zc);
+    buildingGroup.add(cap);
+    var stub = new THREE.Mesh(new THREE.BoxGeometry(0.72, 1.05, 0.42), pilasterMat);
+    stub.position.set(0, y1 + 0.65, zc);
+    buildingGroup.add(stub);
+    var stubCap = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.2, 0.56), capMat);
+    stubCap.position.set(0, y1 + 1.25, zc);
+    buildingGroup.add(stubCap);
+  })();
+
   // 避雷針マスト + 渡り線
   var mastMat = new THREE.MeshStandardMaterial({ color: 0x4a3226, roughness: 0.7, metalness: 0.3 });
   var mastTops = { front: [], back: [] };
@@ -962,21 +982,28 @@
   fireBox.position.set(2.6, 0.4, -0.7);
   buildingGroup.add(fireBox);
 
-  // 正面右の赤レンガ附属屋
+  // 正面（画面右＝-x側）の赤レンガ附属屋。赤い扉2枚
   var annexTex = makeBrickWallTexture({
-    realW: 6.4, realH: 2.6, windows: [], door: { cxFrac: 0.45, wFrac: 0.22, hFrac: 0.72 },
-    nameProb: 0, ivyDensity: 6, plaster: 0.1
+    realW: 6.4, realH: 2.6, windows: [],
+    nameProb: 0, ivyDensity: 7, plaster: 0.08
   });
-  var annexSideMat = new THREE.MeshStandardMaterial({ color: 0x84503c, roughness: 0.95 });
+  var annexSideMat = new THREE.MeshStandardMaterial({ color: 0x8a4a38, roughness: 0.95 });
   var annex = new THREE.Mesh(new THREE.BoxGeometry(6.4, 2.6, 3.2), [
     annexSideMat, annexSideMat, flatBrick, flatBrick, annexSideMat,
     new THREE.MeshStandardMaterial({ map: annexTex.map, bumpMap: annexTex.bump, bumpScale: 0.25, roughness: 0.95 })
   ]);
-  annex.position.set(6.2, 1.3, -1.6);
+  annex.position.set(-6.2, 1.3, -1.6);
   buildingGroup.add(annex);
   var annexRoof = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.12, 3.6), new THREE.MeshStandardMaterial({ color: 0x6d7378, roughness: 0.6, metalness: 0.2 }));
-  annexRoof.position.set(6.2, 2.66, -1.6);
+  annexRoof.position.set(-6.2, 2.66, -1.6);
   buildingGroup.add(annexRoof);
+  // 赤い扉2枚（写真右下）
+  var redDoorMat = new THREE.MeshStandardMaterial({ color: 0x9c3b2c, roughness: 0.7, metalness: 0.15 });
+  [-7.4, -6.0].forEach(function (dx) {
+    var rd = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.9, 0.08), redDoorMat);
+    rd.position.set(dx, 0.98, -3.22);
+    buildingGroup.add(rd);
+  });
 
   // 建物足元の接地影（AOストリップ）
   var aoCanvas = makeCanvas(32, 32);
@@ -1327,7 +1354,7 @@
   }
   function addRock(x, z) {
     var r = rand(0.3, 0.7);
-    var rock = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), new THREE.MeshStandardMaterial({ color: hsl(30, 8, rand(40, 60)), roughness: 1, flatShading: true }));
+    var rock = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), new THREE.MeshStandardMaterial({ color: hsl(28, 12, rand(28, 40)), roughness: 1, flatShading: true }));
     rock.position.set(x, r * 0.5, z);
     rock.rotation.set(rand(0, 3), rand(0, 3), rand(0, 3));
     scene.add(rock);
@@ -1588,7 +1615,7 @@
 
   var colliders = [
     { minX: -TOTAL_W / 2 - 0.6, maxX: TOTAL_W / 2 + 0.6, minZ: -0.6, maxZ: BUILD_LEN + 0.6 },
-    { minX: 2.4, maxX: 10.0, minZ: -3.8, maxZ: 0.6 },      // 附属屋
+    { minX: -10.0, maxX: -2.4, minZ: -3.8, maxZ: 0.6 },    // 附属屋（画面右=-x）
     { minX: 11.4, maxX: 31.1, minZ: -0.1, maxZ: 36.1 },    // 貯水池+フェンス
     { minX: 18.2, maxX: 21.8, minZ: 37.7, maxZ: 41.3 },    // 水タンク
     { minX: -12.4, maxX: -11.6, minZ: -24, maxZ: -4 },     // 前庭 左（動画）広告列
