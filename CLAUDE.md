@@ -43,8 +43,8 @@ start.bat をダブルクリック
 | `asset/ad-movie-2.mp4`, `ad-movie-3.mp4` | 追加の動画広告（無ければ「準備中」表示） |
 | `asset/ad-image-2.png`, `ad-image-3.png` | 追加の静止画広告（無ければ「準備中」表示） |
 
-広告は北側の「広告プラザ」に動画3面＋静止画3面を横並び。ファイル名は `VIDEO_FILES` /
-`IMAGE_FILES` 配列で管理。素材が無い面は `makeAdPlaceholderTexture` のプレースホルダを表示し、
+広告は**正面の前庭**に、中央通路を挟んで左（西）に動画3面・右（東）に静止画3面を配置
+（通路を歩くと目に入る「広告アベニュー」）。ファイル名は `VIDEO_FILES` / `IMAGE_FILES` 配列で管理。素材が無い面は `makeAdPlaceholderTexture` のプレースホルダを表示し、
 `loadeddata` / テクスチャ読込成功時に本素材へ差し替える。動画は自動再生のためミュート開始、
 `M` キーで `setAdMuted` により全面まとめて音声トグル。操作ガイドは index.html の
 `#controls-guide`（右下）で、ロック時に表示。
@@ -81,6 +81,9 @@ Three.js は r128（クラシックなグローバルビルド、CDN読み込み
 
 - 建物は双子切妻（M型屋根）。壁は1つの BoxGeometry に面別マテリアル、
   屋根斜面と妻壁三角は `makeQuadMesh` / `makeTriMesh` で手動生成。
+- 妻面の窓は**正面から見て左＝丸窓 / 右＝大きな半円アーチ窓（`drawFanWindow`）**。
+  BoxGeometry の front 面は +x が画面左に写るため、`gableFR`(+x)=丸窓 / `gableFL`(-x)=fan。
+  正面下部は白漆喰主体（plaster 0.92）＋大きな貨物扉で、実物のシンプルな外観に合わせる。
 - 実物写真準拠の要素: 非対称の妻面（左=丸窓 / 右=大アーチ窓）、隅の付柱＋石帽子、
   破風の歯飾り、避雷針マスト＋渡り線、越屋根、漆喰の剥がれ、正面右の赤レンガ附属屋、
   東側の貯水池（地面 ShapeGeometry に穴あけ＋護岸＋水面＋有刺鉄線フェンス）、

@@ -186,6 +186,50 @@
     ctx.restore();
   }
 
+  // 大きな半円のファン窓（実物の右妻面の窓）。cx=中心x, baseY=半円の下端y, R=半径
+  function drawFanWindow(ctx, cx, baseY, R) {
+    ctx.save();
+    var rw = R * 1.5, rh = R * 0.85, rx = cx - rw / 2, ry = baseY;
+    // 石の縁取り（半円＋下部矩形）
+    ctx.fillStyle = "#cfc0a0";
+    ctx.beginPath();
+    ctx.arc(cx, baseY, R + 18, Math.PI, 2 * Math.PI);
+    ctx.lineTo(cx + R + 18, baseY);
+    ctx.rect(rx - 16, ry, rw + 32, rh + 14);
+    ctx.fill();
+    // 半円ガラス
+    ctx.fillStyle = "#d7dee4";
+    ctx.beginPath(); ctx.arc(cx, baseY, R, Math.PI, 2 * Math.PI); ctx.closePath(); ctx.fill();
+    // 下部の格子窓
+    ctx.fillStyle = "#c6cfd2"; ctx.fillRect(rx, ry, rw, rh);
+    // 汚れ・退色
+    var gg = ctx.createLinearGradient(0, baseY - R, 0, baseY + rh);
+    gg.addColorStop(0, "rgba(120,130,120,0.30)");
+    gg.addColorStop(1, "rgba(90,100,90,0.10)");
+    ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.arc(cx, baseY, R, Math.PI, 2 * Math.PI); ctx.closePath(); ctx.fill();
+    ctx.fillRect(rx, ry, rw, rh);
+    // 放射マリオン（半円）
+    ctx.strokeStyle = "rgba(90,92,84,0.8)"; ctx.lineWidth = 4;
+    for (var a = 1; a < 8; a++) {
+      var ang = Math.PI + Math.PI * a / 8;
+      ctx.beginPath();
+      ctx.moveTo(cx, baseY);
+      ctx.lineTo(cx + Math.cos(ang) * R, baseY + Math.sin(ang) * R);
+      ctx.stroke();
+    }
+    // 同心アーチ
+    [0.4, 0.72].forEach(function (f) {
+      ctx.beginPath(); ctx.arc(cx, baseY, R * f, Math.PI, 2 * Math.PI); ctx.stroke();
+    });
+    // 下部格子の桟
+    ctx.beginPath();
+    for (var mi = 1; mi < 4; mi++) { ctx.moveTo(rx + rw * mi / 4, ry); ctx.lineTo(rx + rw * mi / 4, ry + rh); }
+    ctx.moveTo(rx, ry + rh / 2); ctx.lineTo(rx + rw, ry + rh / 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // ---------------------------------------------------------------
   // レンガ壁テクスチャ（カラー + バンプ）+ 刻印レジストリ
   // ---------------------------------------------------------------
@@ -420,8 +464,8 @@
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI * 2); ctx.fill();
     }
-    if (style === "circle") drawWindow(ctx, 384 - 105, 340, 210, 210, "circle");
-    else if (style === "arch") drawWindow(ctx, 384 - 145, 175, 290, 330, "arch");
+    if (style === "circle") drawWindow(ctx, 384 - 110, 345, 220, 220, "circle");
+    else if (style === "fan") drawFanWindow(ctx, 384, 470, 205);
     for (var i = 0; i < 8; i++) {
       var vx = rand(0, S), vy = rand(380, S), vr = rand(70, 190);
       var vg = ctx.createRadialGradient(vx, vy, 0, vx, vy, vr);
@@ -784,15 +828,15 @@
     wallId: "west", realW: BUILD_LEN, realH: WALL_H,
     windows: makeLongWallWindows(), nameProb: 0.06, ivyDensity: 40, plaster: 0.1
   });
+  // 正面（妻面下部）: 白漆喰主体で、大きな貨物扉＋控えめな埋めアーチ（実物準拠）
   var texFront = makeBrickWallTexture({
     wallId: "front", realW: TOTAL_W, realH: WALL_H,
     windows: [
-      { cxFrac: 0.2, topFrac: 0.35, wFrac: 0.06, hFrac: 0.42, style: "niche" },
-      { cxFrac: 0.68, topFrac: 0.32, wFrac: 0.065, hFrac: 0.46, style: "niche" }
+      { cxFrac: 0.7, topFrac: 0.34, wFrac: 0.16, hFrac: 0.5, style: "niche" }
     ],
-    door: { cxFrac: 0.45, wFrac: 0.05, hFrac: 0.42 },
-    nameProb: 0.06, ivyDensity: 8, plaster: 0.75,
-    featured: [{ y_m: 1.6, xFrac: 0.56, donor: FEATURED_EXEMATE }]
+    door: { cxFrac: 0.24, wFrac: 0.15, hFrac: 0.76 },
+    nameProb: 0.05, ivyDensity: 7, plaster: 0.92,
+    featured: [{ y_m: 1.5, xFrac: 0.5, donor: FEATURED_EXEMATE }]
   });
   var texBack = makeBrickWallTexture({
     wallId: "back", realW: TOTAL_W, realH: WALL_H,
@@ -843,8 +887,9 @@
   addClerestory(-SHED_HW);
   addClerestory(SHED_HW);
 
-  var gableFL = makeGableTriTexture("circle", false, 0.6);
-  var gableFR = makeGableTriTexture("arch", true, 0.55);
+  // 正面から見て「左＝丸窓 / 右＝大アーチ窓」になるよう配置（+x が画面左に写るため FR=丸窓）
+  var gableFL = makeGableTriTexture("fan", false, 0.6);
+  var gableFR = makeGableTriTexture("circle", true, 0.55);
   var gableBL = makeGableTriTexture("plain", false, 0.25);
   var gableBR = makeGableTriTexture("plain", true, 0.25);
 
@@ -1104,19 +1149,19 @@
   // ---------------------------------------------------------------
   var road = new THREE.Mesh(new THREE.PlaneGeometry(140, 8), new THREE.MeshStandardMaterial({ map: makeRoadTexture(), roughness: 0.95 }));
   road.rotation.x = -Math.PI / 2;
-  road.position.set(0, 0.03, -17);
+  road.position.set(0, 0.03, -24);
   road.userData.shadow = "receive";
   scene.add(road);
   var sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(140, 1.8), new THREE.MeshStandardMaterial({ color: 0xa8a49a, roughness: 0.95 }));
   sidewalk.rotation.x = -Math.PI / 2;
-  sidewalk.position.set(0, 0.025, -12.1);
+  sidewalk.position.set(0, 0.025, -19);
   sidewalk.userData.shadow = "receive";
   scene.add(sidewalk);
 
-  // 門から正面扉への通路（扉は x≈0.9）
-  var path = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 11), concreteMaterial());
+  // 門から正面扉への通路（扉は x≈0.9）— 前庭を広く取ったので長め
+  var path = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 16), concreteMaterial());
   path.rotation.x = -Math.PI / 2;
-  path.position.set(0.9, 0.02, -5.5);
+  path.position.set(0.9, 0.02, -7.5);
   path.userData.shadow = "receive";
   scene.add(path);
 
@@ -1125,15 +1170,15 @@
   var poleTops = [];
   [-32, -14, 4, 22, 40].forEach(function (px) {
     var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.19, 9.5, 8), poleMat);
-    pole.position.set(px, 4.75, -22);
+    pole.position.set(px, 4.75, -28);
     scene.add(pole);
     var arm = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.13, 0.13), new THREE.MeshStandardMaterial({ color: 0x5a3a24 }));
-    arm.position.set(px, 8.6, -22);
+    arm.position.set(px, 8.6, -28);
     scene.add(arm);
     var arm2 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.11, 0.11), new THREE.MeshStandardMaterial({ color: 0x5a3a24 }));
-    arm2.position.set(px, 7.7, -22);
+    arm2.position.set(px, 7.7, -28);
     scene.add(arm2);
-    poleTops.push(new THREE.Vector3(px, 8.9, -22));
+    poleTops.push(new THREE.Vector3(px, 8.9, -28));
   });
   for (var pw = 0; pw < poleTops.length - 1; pw++) {
     [-0.9, -0.3, 0.3, 0.9].forEach(function (off) {
@@ -1148,7 +1193,7 @@
   // ---------------------------------------------------------------
   // 敷地フェンス（コンクリ支柱 + 有刺鉄線、正面に門）
   // ---------------------------------------------------------------
-  var SITE = { minX: -15, maxX: 33, minZ: -9, maxZ: 44, gateX0: -1, gateX1: 4 };
+  var SITE = { minX: -15, maxX: 33, minZ: -16, maxZ: 44, gateX0: -1, gateX1: 4 };
   (function addSiteFence() {
     var postMat = new THREE.MeshStandardMaterial({ color: 0xb5b0a4, roughness: 0.9 });
     var wl = new THREE.LineBasicMaterial({ color: 0x6f757a });
@@ -1200,11 +1245,11 @@
     houseColliders.push({ minX: x - half, maxX: x + half, minZ: z - half, maxZ: z + half });
   }
   // 道路の向かいの一列だけ（コンパクト）
-  addHouse(-24, -27, 0.08, 7, 6, 3, 0xd8d3c8, 0x5a5f66);
-  addHouse(-8, -28, -0.05, 8, 7, 3, 0xc9b8a4, 0x7a4a3a);
-  addHouse(9, -27, 0.12, 6, 6, 2.8, 0xb9c0c4, 0x3f4a55);
-  addHouse(25, -28, 0.3, 7, 6, 3, 0xe2ddd2, 0x5a5f66);
-  addHouse(41, -25, 0.5, 6, 7, 2.8, 0xd8d3c8, 0x7a4a3a);
+  addHouse(-24, -34, 0.08, 7, 6, 3, 0xd8d3c8, 0x5a5f66);
+  addHouse(-8, -35, -0.05, 8, 7, 3, 0xc9b8a4, 0x7a4a3a);
+  addHouse(9, -34, 0.12, 6, 6, 2.8, 0xb9c0c4, 0x3f4a55);
+  addHouse(25, -35, 0.3, 7, 6, 3, 0xe2ddd2, 0x5a5f66);
+  addHouse(41, -32, 0.5, 6, 7, 2.8, 0xd8d3c8, 0x7a4a3a);
 
   // 白い小屋（敷地内西・写真1左端）
   var whiteShed = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.2, 2.2), new THREE.MeshStandardMaterial({ color: 0xe6e4de, roughness: 0.85 }));
@@ -1247,10 +1292,10 @@
   function blockedForProp(x, z) {
     if (tooCloseToBuilding(x, z, 3.5)) return true;
     if (x > 11 && x < 31.5 && z > 0 && z < 36.5) return true;   // 貯水池
-    if (z > -23 && z < -11 && x > -50 && x < 50) return true;   // 道路 + 歩道
-    if (x > -0.5 && x < 2.5 && z > -9.5 && z < 0.5) return true; // 通路
+    if (z > -30 && z < -17 && x > -50 && x < 50) return true;   // 道路 + 歩道
+    if (x > -0.5 && x < 2.5 && z > -16 && z < 0.5) return true; // 通路
     if (x > 32 && x < 44 && z > 5 && z < 29) return true;       // 東土間
-    if (x > -17 && x < 17 && z > 38 && z < 43) return true;     // 広告プラザ
+    if (x > -10 && x < 11 && z > -14.5 && z < -2) return true;  // 前庭の広告列
     for (var i = 0; i < houseColliders.length; i++) {
       var h = houseColliders[i];
       if (x > h.minX - 2 && x < h.maxX + 2 && z > h.minZ - 2 && z < h.maxZ + 2) return true;
@@ -1260,10 +1305,10 @@
   function blockedForGrass(x, z) {
     if (tooCloseToBuilding(x, z, 0.7)) return true;
     if (x > 11.5 && x < 31 && z > 0.5 && z < 36) return true;
-    if (z > -23 && z < -11) return true;
-    if (x > -0.6 && x < 2.4 && z > -9.5 && z < 0.5) return true;
+    if (z > -30 && z < -17) return true;
+    if (x > -0.6 && x < 2.4 && z > -16 && z < 0.5) return true;
     if (x > 33 && x < 43 && z > 6 && z < 28) return true;
-    if (x > -17 && x < 17 && z > 39 && z < 43) return true;     // 広告プラザ
+    if (x > -10 && x < 11 && z > -14.5 && z < -2) return true;  // 前庭の広告列
     return false;
   }
 
@@ -1473,19 +1518,20 @@
     scene.add(group);
   }
 
-  // 北側の広告プラザ: 動画3面 + 静止画3面を横並び（南向き）
-  var AD_Z = 41, AD_ROTY = Math.PI, AD_W = 4.6, AD_H = 2.6, AD_GAP = 5.5, AD_X0 = -13.75;
+  // 正面の前庭に広告を左右で配置（通路を挟んで動画3面＝左 / 静止画3面＝右）。
+  // 通路を歩くと自然に目に入る「広告アベニュー」。
+  var AD_W = 4.2, AD_H = 2.5;
+  var AD_ZS = [-4, -8.5, -13];   // 前庭 z（手前ほど大きく見える）
+  // 左（西）: 動画3面、東向き(+x)で通路側を向く
   for (var av = 0; av < 3; av++) {
-    addMonitor(AD_X0 + av * AD_GAP, AD_Z, AD_ROTY, AD_W, AD_H, makeVideoScreenMat(VIDEO_FILES[av], av), "動画広告 " + (av + 1));
+    addMonitor(-8.5, AD_ZS[av], Math.PI / 2, AD_W, AD_H, makeVideoScreenMat(VIDEO_FILES[av], av), "動画広告 " + (av + 1));
   }
+  // 右（東）: 静止画3面、西向き(-x)で通路側を向く
   for (var ai = 0; ai < 3; ai++) {
-    addMonitor(AD_X0 + (ai + 3) * AD_GAP, AD_Z, AD_ROTY, AD_W, AD_H, makeImageScreenMat(IMAGE_FILES[ai], ai), "静止画広告 " + (ai + 1));
+    addMonitor(9.5, AD_ZS[ai], -Math.PI / 2, AD_W, AD_H, makeImageScreenMat(IMAGE_FILES[ai], ai), "静止画広告 " + (ai + 1));
   }
-  // 紹介動画を正面のエントランス脇にも大きく1面
-  addMonitor(-12, -2, Math.PI * 0.42, 7, 4, makeVideoScreenMat(VIDEO_FILES[0], 0), "遠賀川水源地ポンプ室 紹介動画");
 
-  addSignboard(6.5, -10.6, Math.PI, ["PROJECT", "遠賀川水源地ポンプ室", "メタバース保存プロジェクト", "プロトタイプ v0.4"], "#6c3483");
-  addSignboard(-6, 39, 0, ["SPONSOR", "広告プラザ", "動画3面・静止画3面", "AD SPACE"], "#c0392b");
+  addSignboard(6.5, -15.4, Math.PI, ["PROJECT", "遠賀川水源地ポンプ室", "メタバース保存プロジェクト", "プロトタイプ v0.5"], "#6c3483");
 
   // ---------------------------------------------------------------
   // 影の一括設定
@@ -1501,7 +1547,7 @@
   // ---------------------------------------------------------------
   // 操作系
   // ---------------------------------------------------------------
-  camera.position.set(1.5, 1.7, -8.5);
+  camera.position.set(0.9, 1.7, -15.5);
   camera.rotation.y = Math.PI;
 
   var controls = new THREE.PointerLockControls(camera, document.body);
@@ -1547,8 +1593,8 @@
     { minX: 2.4, maxX: 10.0, minZ: -3.8, maxZ: 0.6 },      // 附属屋
     { minX: 11.4, maxX: 31.1, minZ: -0.1, maxZ: 36.1 },    // 貯水池+フェンス
     { minX: 18.2, maxX: 21.8, minZ: 37.7, maxZ: 41.3 },    // 水タンク
-    { minX: -16.5, maxX: 16.5, minZ: 40.4, maxZ: 41.7 },   // 北の広告プラザ
-    { minX: -14, maxX: -10, minZ: -3.2, maxZ: -0.8 },      // エントランス脇の動画モニター
+    { minX: -8.9, maxX: -8.1, minZ: -14, maxZ: -2.8 },     // 前庭 左（動画）広告列
+    { minX: 9.1, maxX: 9.9, minZ: -14, maxZ: -2.8 },       // 前庭 右（静止画）広告列
     // 敷地フェンス（門 x -1..4 は通行可）
     { minX: SITE.minX - 0.2, maxX: SITE.gateX0, minZ: SITE.minZ - 0.25, maxZ: SITE.minZ + 0.25 },
     { minX: SITE.gateX1, maxX: SITE.maxX + 0.2, minZ: SITE.minZ - 0.25, maxZ: SITE.minZ + 0.25 },
