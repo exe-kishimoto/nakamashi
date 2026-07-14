@@ -102,9 +102,9 @@
       ctx.beginPath(); ctx.arc(cx, cy, r * 1.12, 0, Math.PI * 2);
       ctx.fillStyle = "#cfc0a0"; ctx.fill();
       ctx.beginPath(); ctx.arc(cx, cy, r * 0.82, 0, Math.PI * 2);
-      ctx.fillStyle = "#2e5450"; ctx.fill();
+      ctx.fillStyle = "#2a3a37"; ctx.fill();
       var gr = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx, cy, r * 0.82);
-      gr.addColorStop(0, "rgba(180,210,200,0.35)");
+      gr.addColorStop(0, "rgba(150,180,175,0.22)");
       gr.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = gr;
       ctx.beginPath(); ctx.arc(cx, cy, r * 0.82, 0, Math.PI * 2); ctx.fill();
@@ -828,15 +828,13 @@
     wallId: "west", realW: BUILD_LEN, realH: WALL_H,
     windows: makeLongWallWindows(), nameProb: 0.06, ivyDensity: 40, plaster: 0.1
   });
-  // 正面（妻面下部）: 白漆喰主体で、大きな貨物扉＋控えめな埋めアーチ（実物準拠）
+  // 正面（妻面下部）: 白漆喰主体で、大きなアーチ貨物扉（実物のシンプルな外観）
   var texFront = makeBrickWallTexture({
     wallId: "front", realW: TOTAL_W, realH: WALL_H,
-    windows: [
-      { cxFrac: 0.7, topFrac: 0.34, wFrac: 0.16, hFrac: 0.5, style: "niche" }
-    ],
-    door: { cxFrac: 0.24, wFrac: 0.15, hFrac: 0.76 },
-    nameProb: 0.05, ivyDensity: 7, plaster: 0.92,
-    featured: [{ y_m: 1.5, xFrac: 0.5, donor: FEATURED_EXEMATE }]
+    windows: [],
+    door: { cxFrac: 0.27, wFrac: 0.17, hFrac: 0.72 },
+    nameProb: 0.05, ivyDensity: 6, plaster: 0.95,
+    featured: [{ y_m: 1.5, xFrac: 0.62, donor: FEATURED_EXEMATE }]
   });
   var texBack = makeBrickWallTexture({
     wallId: "back", realW: TOTAL_W, realH: WALL_H,
@@ -919,12 +917,6 @@
   addPilaster(TOTAL_W / 2, 0.05, WALL_H + 0.7);
   addPilaster(-TOTAL_W / 2, BUILD_LEN - 0.05, WALL_H + 0.7);
   addPilaster(TOTAL_W / 2, BUILD_LEN - 0.05, WALL_H + 0.7);
-  var centerBut = new THREE.Mesh(new THREE.BoxGeometry(0.9, VALLEY_H + 0.35, 0.55), pilasterMat);
-  centerBut.position.set(0, (VALLEY_H + 0.35) / 2, -0.12);
-  buildingGroup.add(centerBut);
-  var centerCap = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.24, 0.75), capMat);
-  centerCap.position.set(0, VALLEY_H + 0.45, -0.12);
-  buildingGroup.add(centerCap);
 
   // 避雷針マスト + 渡り線
   var mastMat = new THREE.MeshStandardMaterial({ color: 0x4a3226, roughness: 0.7, metalness: 0.3 });
@@ -1149,19 +1141,19 @@
   // ---------------------------------------------------------------
   var road = new THREE.Mesh(new THREE.PlaneGeometry(140, 8), new THREE.MeshStandardMaterial({ map: makeRoadTexture(), roughness: 0.95 }));
   road.rotation.x = -Math.PI / 2;
-  road.position.set(0, 0.03, -24);
+  road.position.set(0, 0.03, -38);
   road.userData.shadow = "receive";
   scene.add(road);
   var sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(140, 1.8), new THREE.MeshStandardMaterial({ color: 0xa8a49a, roughness: 0.95 }));
   sidewalk.rotation.x = -Math.PI / 2;
-  sidewalk.position.set(0, 0.025, -19);
+  sidewalk.position.set(0, 0.025, -33);
   sidewalk.userData.shadow = "receive";
   scene.add(sidewalk);
 
-  // 門から正面扉への通路（扉は x≈0.9）— 前庭を広く取ったので長め
-  var path = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 16), concreteMaterial());
+  // 門から正面扉への通路（扉は x≈0.9）— 前庭が広いので長め
+  var path = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 30), concreteMaterial());
   path.rotation.x = -Math.PI / 2;
-  path.position.set(0.9, 0.02, -7.5);
+  path.position.set(0.9, 0.02, -14.5);
   path.userData.shadow = "receive";
   scene.add(path);
 
@@ -1170,15 +1162,15 @@
   var poleTops = [];
   [-32, -14, 4, 22, 40].forEach(function (px) {
     var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.19, 9.5, 8), poleMat);
-    pole.position.set(px, 4.75, -28);
+    pole.position.set(px, 4.75, -42);
     scene.add(pole);
     var arm = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.13, 0.13), new THREE.MeshStandardMaterial({ color: 0x5a3a24 }));
-    arm.position.set(px, 8.6, -28);
+    arm.position.set(px, 8.6, -42);
     scene.add(arm);
     var arm2 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.11, 0.11), new THREE.MeshStandardMaterial({ color: 0x5a3a24 }));
-    arm2.position.set(px, 7.7, -28);
+    arm2.position.set(px, 7.7, -42);
     scene.add(arm2);
-    poleTops.push(new THREE.Vector3(px, 8.9, -28));
+    poleTops.push(new THREE.Vector3(px, 8.9, -42));
   });
   for (var pw = 0; pw < poleTops.length - 1; pw++) {
     [-0.9, -0.3, 0.3, 0.9].forEach(function (off) {
@@ -1193,20 +1185,21 @@
   // ---------------------------------------------------------------
   // 敷地フェンス（コンクリ支柱 + 有刺鉄線、正面に門）
   // ---------------------------------------------------------------
-  var SITE = { minX: -15, maxX: 33, minZ: -16, maxZ: 44, gateX0: -1, gateX1: 4 };
+  // 敷地は広めに取り、前庭に広告の余裕を持たせる（フェンスは周縁の控えめな金網）
+  var SITE = { minX: -26, maxX: 42, minZ: -30, maxZ: 50, gateX0: -3, gateX1: 6 };
   (function addSiteFence() {
-    var postMat = new THREE.MeshStandardMaterial({ color: 0xb5b0a4, roughness: 0.9 });
-    var wl = new THREE.LineBasicMaterial({ color: 0x6f757a });
+    var postMat = new THREE.MeshStandardMaterial({ color: 0x9a978d, roughness: 0.7, metalness: 0.25 });
+    var wl = new THREE.LineBasicMaterial({ color: 0x8a8f92, transparent: true, opacity: 0.55 });
     function fenceRun(x0, z0, x1, z1) {
       var len = Math.hypot(x1 - x0, z1 - z0);
-      var nPosts = Math.max(1, Math.round(len / 3.0));
+      var nPosts = Math.max(1, Math.round(len / 4.5));
       for (var i = 0; i <= nPosts; i++) {
         var t = i / nPosts;
-        var post = new THREE.Mesh(new THREE.BoxGeometry(0.13, 1.35, 0.13), postMat);
-        post.position.set(x0 + (x1 - x0) * t, 0.675, z0 + (z1 - z0) * t);
+        var post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.25, 6), postMat);
+        post.position.set(x0 + (x1 - x0) * t, 0.625, z0 + (z1 - z0) * t);
         scene.add(post);
       }
-      [0.55, 0.85, 1.15, 1.32].forEach(function (h) {
+      [0.5, 0.85, 1.18].forEach(function (h) {
         scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
           new THREE.Vector3(x0, h, z0), new THREE.Vector3(x1, h, z1)
         ]), wl));
@@ -1219,8 +1212,8 @@
     fenceRun(SITE.maxX, SITE.minZ, SITE.maxX, SITE.maxZ);
     // 門柱
     [SITE.gateX0, SITE.gateX1].forEach(function (gx) {
-      var gp = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.6, 0.3), postMat);
-      gp.position.set(gx, 0.8, SITE.minZ);
+      var gp = new THREE.Mesh(new THREE.BoxGeometry(0.24, 1.7, 0.24), new THREE.MeshStandardMaterial({ color: 0x8f8b80, roughness: 0.8 }));
+      gp.position.set(gx, 0.85, SITE.minZ);
       scene.add(gp);
     });
   })();
@@ -1245,11 +1238,11 @@
     houseColliders.push({ minX: x - half, maxX: x + half, minZ: z - half, maxZ: z + half });
   }
   // 道路の向かいの一列だけ（コンパクト）
-  addHouse(-24, -34, 0.08, 7, 6, 3, 0xd8d3c8, 0x5a5f66);
-  addHouse(-8, -35, -0.05, 8, 7, 3, 0xc9b8a4, 0x7a4a3a);
-  addHouse(9, -34, 0.12, 6, 6, 2.8, 0xb9c0c4, 0x3f4a55);
-  addHouse(25, -35, 0.3, 7, 6, 3, 0xe2ddd2, 0x5a5f66);
-  addHouse(41, -32, 0.5, 6, 7, 2.8, 0xd8d3c8, 0x7a4a3a);
+  addHouse(-26, -48, 0.08, 7, 6, 3, 0xd8d3c8, 0x5a5f66);
+  addHouse(-9, -49, -0.05, 8, 7, 3, 0xc9b8a4, 0x7a4a3a);
+  addHouse(9, -48, 0.12, 6, 6, 2.8, 0xb9c0c4, 0x3f4a55);
+  addHouse(26, -49, 0.3, 7, 6, 3, 0xe2ddd2, 0x5a5f66);
+  addHouse(44, -45, 0.5, 6, 7, 2.8, 0xd8d3c8, 0x7a4a3a);
 
   // 白い小屋（敷地内西・写真1左端）
   var whiteShed = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.2, 2.2), new THREE.MeshStandardMaterial({ color: 0xe6e4de, roughness: 0.85 }));
@@ -1292,10 +1285,11 @@
   function blockedForProp(x, z) {
     if (tooCloseToBuilding(x, z, 3.5)) return true;
     if (x > 11 && x < 31.5 && z > 0 && z < 36.5) return true;   // 貯水池
-    if (z > -30 && z < -17 && x > -50 && x < 50) return true;   // 道路 + 歩道
-    if (x > -0.5 && x < 2.5 && z > -16 && z < 0.5) return true; // 通路
+    if (z > -44 && z < -31 && x > -70 && x < 70) return true;   // 道路 + 歩道
+    if (x > -0.6 && x < 2.4 && z > -30 && z < 0.5) return true; // 通路
     if (x > 32 && x < 44 && z > 5 && z < 29) return true;       // 東土間
-    if (x > -10 && x < 11 && z > -14.5 && z < -2) return true;  // 前庭の広告列
+    if (x > -14.5 && x < -9.5 && z > -25 && z < -3) return true; // 左広告列
+    if (x > 10.5 && x < 15.5 && z > -25 && z < -3) return true;  // 右広告列
     for (var i = 0; i < houseColliders.length; i++) {
       var h = houseColliders[i];
       if (x > h.minX - 2 && x < h.maxX + 2 && z > h.minZ - 2 && z < h.maxZ + 2) return true;
@@ -1305,10 +1299,11 @@
   function blockedForGrass(x, z) {
     if (tooCloseToBuilding(x, z, 0.7)) return true;
     if (x > 11.5 && x < 31 && z > 0.5 && z < 36) return true;
-    if (z > -30 && z < -17) return true;
-    if (x > -0.6 && x < 2.4 && z > -16 && z < 0.5) return true;
+    if (z > -44 && z < -31) return true;
+    if (x > -0.6 && x < 2.4 && z > -30 && z < 0.5) return true;
     if (x > 33 && x < 43 && z > 6 && z < 28) return true;
-    if (x > -10 && x < 11 && z > -14.5 && z < -2) return true;  // 前庭の広告列
+    if (x > -13.5 && x < -10.5 && z > -25 && z < -3) return true; // 左広告列
+    if (x > 11.5 && x < 14.5 && z > -25 && z < -3) return true;   // 右広告列
     return false;
   }
 
@@ -1365,31 +1360,34 @@
   addTree(-12.5, 10, 1.4);
   addTree(-13, 24, 1.2);
   addTree(-13.5, 33, 1.1);
-  // 敷地外
-  addTree(-20, 52, 1.2);
-  addTree(28, 50, 1.0);
   addTree(-22, 6, 1.0);
-  addTree(-34, -26, 0.9);
-  addTree(34, -28, 1.0);
-  addTree(47, -6, 1.1);
+  addTree(-23, -18, 1.0);
+  addTree(-24, -28, 0.95);
+  addTree(37, -20, 1.0);
+  addTree(38, -4, 1.05);
+  // 敷地外
+  addTree(-20, 54, 1.2);
+  addTree(28, 52, 1.0);
+  addTree(-40, -30, 0.9);
+  addTree(46, -34, 1.0);
 
-  for (var bi = 0; bi < 26; bi++) {
-    var bx2 = rand(-35, 45), bz2 = rand(-30, 58);
+  for (var bi = 0; bi < 30; bi++) {
+    var bx2 = rand(-24, 40), bz2 = rand(-29, 56);
     if (!blockedForProp(bx2, bz2)) addBush(bx2, bz2);
   }
-  for (var rk = 0; rk < 10; rk++) {
-    var rx = rand(-20, 32), rz = rand(-8, 44);
+  for (var rk = 0; rk < 12; rk++) {
+    var rx = rand(-22, 34), rz = rand(-28, 46);
     if (!blockedForProp(rx, rz)) addRock(rx, rz);
   }
-  // 敷地内は草を濃く
-  for (var gt = 0; gt < 320; gt++) {
-    var gx = rand(-14.5, 32), gz = rand(-8.5, 43.5);
+  // 敷地内は草を濃く（広い前庭 z:-29..44 を含む）
+  for (var gt = 0; gt < 420; gt++) {
+    var gx = rand(-24, 40), gz = rand(-29, 44);
     if (!blockedForGrass(gx, gz)) addGrassTuft(gx, gz);
   }
   // 敷地外まばら
-  for (var gt2 = 0; gt2 < 60; gt2++) {
-    var gx2 = rand(-40, 50), gz2 = rand(-10, 58);
-    if (gx2 > -16 && gx2 < 34 && gz2 > -10 && gz2 < 45) continue;
+  for (var gt2 = 0; gt2 < 50; gt2++) {
+    var gx2 = rand(-48, 56), gz2 = rand(-30, 60);
+    if (gx2 > -27 && gx2 < 43 && gz2 > -31 && gz2 < 51) continue;
     if (!blockedForGrass(gx2, gz2)) addGrassTuft(gx2, gz2);
   }
 
@@ -1519,20 +1517,19 @@
     scene.add(group);
   }
 
-  // 正面の前庭に広告を左右で配置（通路を挟んで動画3面＝左 / 静止画3面＝右）。
-  // 通路を歩くと自然に目に入る「広告アベニュー」。
-  var AD_W = 4.2, AD_H = 2.5;
-  var AD_ZS = [-4, -8.5, -13];   // 前庭 z（手前ほど大きく見える）
-  // 左（西）: 動画3面、東向き(+x)で通路側を向く
+  // 正面の広い前庭に広告を左右で配置（通路を挟んで動画3面＝左 / 静止画3面＝右）。
+  // 通路を歩くと自然に目に入る「広告アベニュー」。間隔を広く取り窮屈感をなくす。
+  var AD_W = 5, AD_H = 2.9;
+  var AD_ZS = [-6, -14, -22];    // 前庭 z（ゆったり配置）
+  var AD_LX = -12, AD_RX = 13;   // 左右の列（通路 x≈0.9 から離す）
   for (var av = 0; av < 3; av++) {
-    addMonitor(-8.5, AD_ZS[av], Math.PI / 2, AD_W, AD_H, makeVideoScreenMat(VIDEO_FILES[av], av), "動画広告 " + (av + 1));
+    addMonitor(AD_LX, AD_ZS[av], Math.PI / 2, AD_W, AD_H, makeVideoScreenMat(VIDEO_FILES[av], av), "動画広告 " + (av + 1));
   }
-  // 右（東）: 静止画3面、西向き(-x)で通路側を向く
   for (var ai = 0; ai < 3; ai++) {
-    addMonitor(9.5, AD_ZS[ai], -Math.PI / 2, AD_W, AD_H, makeImageScreenMat(IMAGE_FILES[ai], ai), "静止画広告 " + (ai + 1));
+    addMonitor(AD_RX, AD_ZS[ai], -Math.PI / 2, AD_W, AD_H, makeImageScreenMat(IMAGE_FILES[ai], ai), "静止画広告 " + (ai + 1));
   }
 
-  addSignboard(13, -13, -Math.PI / 2, ["PROJECT", "遠賀川水源地ポンプ室", "メタバース保存プロジェクト", "プロトタイプ v0.5"], "#6c3483");
+  addSignboard(20, -24, -Math.PI / 2, ["PROJECT", "遠賀川水源地ポンプ室", "メタバース保存プロジェクト", "プロトタイプ v0.6"], "#6c3483");
 
   // ---------------------------------------------------------------
   // 影の一括設定
@@ -1548,7 +1545,7 @@
   // ---------------------------------------------------------------
   // 操作系
   // ---------------------------------------------------------------
-  camera.position.set(0.9, 1.7, -15.5);
+  camera.position.set(0.9, 1.7, -27);
   camera.rotation.y = Math.PI;
 
   var controls = new THREE.PointerLockControls(camera, document.body);
@@ -1600,8 +1597,8 @@
     { minX: 2.4, maxX: 10.0, minZ: -3.8, maxZ: 0.6 },      // 附属屋
     { minX: 11.4, maxX: 31.1, minZ: -0.1, maxZ: 36.1 },    // 貯水池+フェンス
     { minX: 18.2, maxX: 21.8, minZ: 37.7, maxZ: 41.3 },    // 水タンク
-    { minX: -8.9, maxX: -8.1, minZ: -14, maxZ: -2.8 },     // 前庭 左（動画）広告列
-    { minX: 9.1, maxX: 9.9, minZ: -14, maxZ: -2.8 },       // 前庭 右（静止画）広告列
+    { minX: -12.4, maxX: -11.6, minZ: -24, maxZ: -4 },     // 前庭 左（動画）広告列
+    { minX: 12.6, maxX: 13.4, minZ: -24, maxZ: -4 },       // 前庭 右（静止画）広告列
     // 敷地フェンス（門 x -1..4 は通行可）
     { minX: SITE.minX - 0.2, maxX: SITE.gateX0, minZ: SITE.minZ - 0.25, maxZ: SITE.minZ + 0.25 },
     { minX: SITE.gateX1, maxX: SITE.maxX + 0.2, minZ: SITE.minZ - 0.25, maxZ: SITE.minZ + 0.25 },
