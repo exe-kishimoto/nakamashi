@@ -1,12 +1,11 @@
-/* 遠賀川水源地ポンプ室 メタバース保存プロジェクト — プロトタイプ v0.3
+/* 遠賀川水源地ポンプ室 メタバース保存プロジェクト — プロトタイプ v0.4
    Three.js r128 (classic global build) + PointerLockControls
 
-   v0.3 の主な内容:
-   - 実物写真ベースの外観再現（非対称の妻面 / 付柱 / 歯飾り / 避雷針マスト /
-     漆喰の剥がれ / 越屋根 / 貯水池 / 黄手すり / 鉄塔 / 県道 / 周辺民家）
-   - レンガをさらに拡大 (0.6m x 0.24m)
-   - レイキャストでレンガを1枚ずつ選択 → 刻印情報ダイアログ
-     （個人: 名前/日付/メッセージ、法人: 業種/従業員数/設立/URL など）
+   v0.4:
+   - 敷地を実物準拠に縮小（フェンスで囲まれたコンパクトな区画）
+   - 配置修正: 道路は正面妻壁のすぐ前 / 電柱は道路沿い / 貯水池は建物至近
+   - グラフィック強化: 影(PCFSoft) / ACESトーンマッピング / レンガのバンプマップ /
+     雲と山並みのある空 / 接地影 / 屋根・地面テクスチャ改善
 */
 
 (function () {
@@ -22,14 +21,13 @@
   function makeCanvas(w, h) { var c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
 
   // ---------------------------------------------------------------
-  // レンガ格子（拡大版）と刻印レジストリ
+  // レンガ格子と刻印レジストリ
   // ---------------------------------------------------------------
   var PX_PER_M = 110;
   var BRICK_W_M = 0.6;
   var BRICK_H_M = 0.24;
   var MORTAR_M = 0.03;
 
-  // key = "wallId:row:col" -> donor
   var brickRegistry = {};
 
   var PERSON_NAMES = [
@@ -76,7 +74,6 @@
     };
   }
 
-  // 実在アセット提供元（exemate）の見本刻印。正面の目立つ位置に固定配置
   var FEATURED_EXEMATE = {
     type: "company", name: "株式会社エグゼメイト", engrave: "exemate",
     industry: "ITソリューション・システム開発", employees: "45名", founded: "2015年",
@@ -86,7 +83,7 @@
   };
 
   // ---------------------------------------------------------------
-  // 窓・扉の描画（style: circle / arch / smallarch / niche / door）
+  // 窓・扉の描画
   // ---------------------------------------------------------------
   function archPath(ctx, x, y, w, h) {
     var r = w / 2;
@@ -106,6 +103,11 @@
       ctx.fillStyle = "#cfc0a0"; ctx.fill();
       ctx.beginPath(); ctx.arc(cx, cy, r * 0.82, 0, Math.PI * 2);
       ctx.fillStyle = "#2e5450"; ctx.fill();
+      var gr = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx, cy, r * 0.82);
+      gr.addColorStop(0, "rgba(180,210,200,0.35)");
+      gr.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = gr;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.82, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = "rgba(205,220,214,0.5)";
       ctx.lineWidth = Math.max(1, w * 0.03);
       ctx.beginPath();
@@ -118,7 +120,11 @@
       ctx.fillStyle = "#cfc0a0"; ctx.fill();
       archPath(ctx, x, y, w, h);
       ctx.fillStyle = "#e9e4d6"; ctx.fill();
-      // 下部の青枠窓（白い格子）
+      var sg = ctx.createLinearGradient(0, y, 0, y + h * 0.4);
+      sg.addColorStop(0, "rgba(90,85,70,0.35)");
+      sg.addColorStop(1, "rgba(90,85,70,0)");
+      archPath(ctx, x, y, w, h);
+      ctx.fillStyle = sg; ctx.fill();
       var wy = y + h * 0.62, wh = h * 0.34, wx = x + w * 0.08, ww = w * 0.84;
       ctx.fillStyle = "#2e5c8a"; ctx.fillRect(wx, wy, ww, wh);
       ctx.strokeStyle = "rgba(240,244,246,0.9)";
@@ -157,7 +163,6 @@
       ctx.strokeStyle = "rgba(60,50,38,0.6)";
       ctx.lineWidth = Math.max(1, w * 0.025);
       ctx.beginPath(); ctx.moveTo(x + w / 2, y + w * 0.3); ctx.lineTo(x + w / 2, y + h); ctx.stroke();
-      // さび
       for (var ri = 0; ri < 6; ri++) {
         ctx.fillStyle = "rgba(120,70,35," + rand(0.15, 0.35) + ")";
         ctx.fillRect(x + rand(0, w * 0.9), y + rand(h * 0.3, h * 0.9), rand(2, 6), rand(6, 22));
@@ -166,14 +171,31 @@
     ctx.restore();
   }
 
+  // バンプ用: 窓/扉部分をフラット(中間グレー)で塗る
+  function drawWindowBump(ctx, x, y, w, h, style) {
+    ctx.save();
+    ctx.fillStyle = "#5a5a5a";
+    if (style === "circle") {
+      var r = w / 2;
+      ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, r * 1.12, 0, Math.PI * 2); ctx.fill();
+    } else {
+      var pad = w * 0.2;
+      archPath(ctx, x - pad, y - pad, w + pad * 2, h + pad * 1.5);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   // ---------------------------------------------------------------
-  // レンガ壁テクスチャ + 刻印レジストリ登録
+  // レンガ壁テクスチャ（カラー + バンプ）+ 刻印レジストリ
   // ---------------------------------------------------------------
   function makeBrickWallTexture(opts) {
     var cw = Math.round(opts.realW * PX_PER_M);
     var ch = Math.round(opts.realH * PX_PER_M);
     var canvas = makeCanvas(cw, ch);
     var ctx = canvas.getContext("2d");
+    var bumpCanvas = makeCanvas(cw, ch);
+    var bctx = bumpCanvas.getContext("2d");
     var brickW = BRICK_W_M * PX_PER_M;
     var brickH = BRICK_H_M * PX_PER_M;
     var mortar = Math.max(1.5, MORTAR_M * PX_PER_M);
@@ -183,6 +205,8 @@
 
     ctx.fillStyle = "#3d362e";
     ctx.fillRect(0, 0, cw, ch);
+    bctx.fillStyle = "#2a2a2a"; // 目地 = 凹
+    bctx.fillRect(0, 0, cw, ch);
 
     function isOverOpening(px, py) {
       for (var i = 0; i < windows.length; i++) {
@@ -202,7 +226,7 @@
       return { row: Math.floor(f.y_m / BRICK_H_M), fx: f.xFrac * cw, donor: f.donor, done: false };
     });
 
-    // パス1: レンガ描画 + 刻印対象の収集
+    // パス1: レンガ + 刻印対象収集
     var sigs = [];
     var rows = Math.ceil(ch / brickH) + 1;
     for (var r = 0; r < rows; r++) {
@@ -217,10 +241,22 @@
         else if (p < 0.72) color = hsl(30 + rand(-8, 8), 22 + rand(-6, 10), 58 + rand(-10, 12));
         else if (p < 0.88) color = hsl(18 + rand(-6, 6), 16 + rand(-5, 5), 22 + rand(-6, 6));
         else color = hsl(38, 14, 74);
+        var bx0 = x + mortar / 2, by0 = y + mortar / 2;
         ctx.fillStyle = color;
-        ctx.fillRect(x + mortar / 2, y + mortar / 2, bw, bh);
-        ctx.fillStyle = "rgba(0,0,0,0.10)";
-        ctx.fillRect(x + mortar / 2, y + bh * 0.74, bw, bh * 0.26);
+        ctx.fillRect(bx0, by0, bw, bh);
+        // 上辺ハイライト / 下辺シャドウ（立体感）
+        ctx.fillStyle = "rgba(255,244,228,0.14)";
+        ctx.fillRect(bx0, by0, bw, bh * 0.18);
+        ctx.fillStyle = "rgba(0,0,0,0.16)";
+        ctx.fillRect(bx0, by0 + bh * 0.76, bw, bh * 0.24);
+        // 表面の斑点
+        for (var sp = 0; sp < 3; sp++) {
+          ctx.fillStyle = "rgba(" + (Math.random() < 0.5 ? "0,0,0" : "255,240,220") + "," + rand(0.04, 0.1) + ")";
+          ctx.fillRect(bx0 + rand(0, bw - 4), by0 + rand(0, bh - 3), rand(2, 5), rand(2, 4));
+        }
+        // バンプ: レンガ面 = 凸（明るさに個体差）
+        bctx.fillStyle = "hsl(0,0%," + Math.round(rand(62, 78)) + "%)";
+        bctx.fillRect(bx0, by0, bw, bh);
 
         var bcx = x + brickW / 2, bcy = y + brickH / 2;
         var usable = bcx > brickW * 0.6 && bcx < cw - brickW * 0.6 && bcy > brickH && !isOverOpening(bcx, bcy);
@@ -239,25 +275,29 @@
       }
     }
 
-    // パス2: 漆喰の剥がれ（白い漆喰がまだらに残る）
+    // パス2: 漆喰の剥がれ・汚れ
     var plaster = opts.plaster || 0;
     var blotches = Math.round(plaster * 130);
     for (var bl = 0; bl < blotches; bl++) {
-      var bx = rand(0, cw), by = rand(0, ch), rr = rand(30, 170);
-      var g = ctx.createRadialGradient(bx, by, rr * 0.15, bx, by, rr);
+      var px2 = rand(0, cw), py2 = rand(0, ch), rr = rand(30, 170);
+      var g = ctx.createRadialGradient(px2, py2, rr * 0.15, px2, py2, rr);
       var a = rand(0.35, 0.8);
       g.addColorStop(0, "rgba(224,212,186," + a + ")");
       g.addColorStop(1, "rgba(224,212,186,0)");
       ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(px2, py2, rr, 0, Math.PI * 2); ctx.fill();
+      // 漆喰部分はバンプも平滑寄りに
+      var bg = bctx.createRadialGradient(px2, py2, rr * 0.15, px2, py2, rr);
+      bg.addColorStop(0, "rgba(120,120,120," + (a * 0.7) + ")");
+      bg.addColorStop(1, "rgba(120,120,120,0)");
+      bctx.fillStyle = bg;
+      bctx.beginPath(); bctx.arc(px2, py2, rr, 0, Math.PI * 2); bctx.fill();
     }
-    // 足元の黒ずみ
     var gg = ctx.createLinearGradient(0, ch * 0.82, 0, ch);
     gg.addColorStop(0, "rgba(40,32,22,0)");
     gg.addColorStop(1, "rgba(40,32,22,0.4)");
     ctx.fillStyle = gg;
     ctx.fillRect(0, ch * 0.82, cw, ch * 0.18);
-    // 雨だれ・さび汚れ
     for (var st = 0; st < 14; st++) {
       ctx.fillStyle = "rgba(96,62,30," + rand(0.1, 0.2) + ")";
       ctx.fillRect(rand(0, cw), rand(0.1, 0.5) * ch, rand(2, 6), rand(0.1, 0.3) * ch);
@@ -276,38 +316,57 @@
       ig.addColorStop(1, "rgba(54,90,38,0)");
       ctx.fillStyle = ig;
       ctx.beginPath(); ctx.arc(ix, iy, irad, 0, Math.PI * 2); ctx.fill();
+      // 蔦の葉の粒
+      for (var lf = 0; lf < irad * 0.8; lf++) {
+        var la = rand(0, Math.PI * 2), ld = rand(0, irad * 0.9);
+        ctx.fillStyle = hsl(rand(95, 130), rand(35, 55), rand(20, 38));
+        ctx.globalAlpha = rand(0.25, 0.7);
+        ctx.fillRect(ix + Math.cos(la) * ld, iy + Math.sin(la) * ld * 0.9, rand(2, 5), rand(2, 5));
+      }
+      ctx.globalAlpha = 1;
     }
 
-    // パス4: 刻印（レンガ枠内に確実に収める）
-    sigs.forEach(function (s) { drawSignatureInBrick(ctx, s.bcx, s.bcy, s.bw, s.bh, s.text); });
+    // パス4: 刻印
+    sigs.forEach(function (s) {
+      drawSignatureInBrick(ctx, s.bcx, s.bcy, s.bw, s.bh, s.text);
+      // バンプ: 刻印は凹
+      drawSignatureBump(bctx, s.bcx, s.bcy, s.bw, s.bh, s.text);
+    });
 
-    // パス5: 窓・扉（最前面）
+    // パス5: 窓・扉
     windows.forEach(function (w) {
       var wpx = w.wFrac * cw, hpx = w.hFrac * ch;
       drawWindow(ctx, w.cxFrac * cw - wpx / 2, w.topFrac * ch, wpx, hpx, w.style);
+      drawWindowBump(bctx, w.cxFrac * cw - wpx / 2, w.topFrac * ch, wpx, hpx, w.style);
     });
     if (door) {
       var dwpx = door.wFrac * cw, dhpx = door.hFrac * ch;
       drawWindow(ctx, door.cxFrac * cw - dwpx / 2, ch - dhpx, dwpx, dhpx, "door");
+      drawWindowBump(bctx, door.cxFrac * cw - dwpx / 2, ch - dhpx, dwpx, dhpx, "door");
     }
 
     var tex = new THREE.CanvasTexture(canvas);
     tex.encoding = THREE.sRGBEncoding;
-    tex.anisotropy = 8;
+    tex.anisotropy = MAX_ANISO;
     tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
-    return tex;
+    var bump = new THREE.CanvasTexture(bumpCanvas);
+    bump.anisotropy = MAX_ANISO;
+    bump.wrapS = bump.wrapT = THREE.ClampToEdgeWrapping;
+    return { map: tex, bump: bump };
   }
 
-  function drawSignatureInBrick(ctx, cx, cy, bw, bh, txt) {
-    var maxW = bw * 0.86;
+  function sigFont(fs) {
+    return "700 " + fs.toFixed(1) + "px \"Hiragino Kaku Gothic ProN\",\"Yu Gothic\",\"Meiryo\",sans-serif";
+  }
+  function fitSigFont(ctx, txt, bw, bh) {
     var fs = bh * 0.64;
-    ctx.save();
-    ctx.font = "700 " + fs.toFixed(1) + "px \"Hiragino Kaku Gothic ProN\",\"Yu Gothic\",\"Meiryo\",sans-serif";
+    ctx.font = sigFont(fs);
     var w = ctx.measureText(txt).width;
-    if (w > maxW) {
-      fs *= maxW / w;
-      ctx.font = "700 " + fs.toFixed(1) + "px \"Hiragino Kaku Gothic ProN\",\"Yu Gothic\",\"Meiryo\",sans-serif";
-    }
+    if (w > bw * 0.86) { fs *= (bw * 0.86) / w; ctx.font = sigFont(fs); }
+  }
+  function drawSignatureInBrick(ctx, cx, cy, bw, bh, txt) {
+    ctx.save();
+    fitSigFont(ctx, txt, bw, bh);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "rgba(20,13,8,0.62)";
@@ -316,9 +375,18 @@
     ctx.fillText(txt, cx - 0.6, cy - 0.6);
     ctx.restore();
   }
+  function drawSignatureBump(bctx, cx, cy, bw, bh, txt) {
+    bctx.save();
+    fitSigFont(bctx, txt, bw, bh);
+    bctx.textAlign = "center";
+    bctx.textBaseline = "middle";
+    bctx.fillStyle = "#303030";
+    bctx.fillText(txt, cx, cy);
+    bctx.restore();
+  }
 
   // ---------------------------------------------------------------
-  // 妻壁（三角）テクスチャ: 歯飾り・石帯・漆喰・窓
+  // 妻壁テクスチャ
   // ---------------------------------------------------------------
   function makeGableTriTexture(style, mirror, plaster) {
     var S = 768;
@@ -336,9 +404,12 @@
         else color = hsl(18, 16, 24);
         ctx.fillStyle = color;
         ctx.fillRect(x + mort, y + mort, bw - mort * 2, bh - mort * 2);
+        ctx.fillStyle = "rgba(255,244,228,0.12)";
+        ctx.fillRect(x + mort, y + mort, bw - mort * 2, (bh - mort * 2) * 0.18);
+        ctx.fillStyle = "rgba(0,0,0,0.14)";
+        ctx.fillRect(x + mort, y + (bh - mort) * 0.78, bw - mort * 2, (bh - mort) * 0.22);
       }
     }
-    // 漆喰
     var blotches = Math.round((plaster || 0) * 70);
     for (var bl = 0; bl < blotches; bl++) {
       var bx = rand(0, S), by = rand(0, S), rr = rand(40, 160);
@@ -349,17 +420,14 @@
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI * 2); ctx.fill();
     }
-    // 窓
     if (style === "circle") drawWindow(ctx, 384 - 105, 340, 210, 210, "circle");
     else if (style === "arch") drawWindow(ctx, 384 - 145, 175, 290, 330, "arch");
-    // 蔦
     for (var i = 0; i < 8; i++) {
       var vx = rand(0, S), vy = rand(380, S), vr = rand(70, 190);
       var vg = ctx.createRadialGradient(vx, vy, 0, vx, vy, vr);
       vg.addColorStop(0, "rgba(44,74,32,0.5)"); vg.addColorStop(1, "rgba(44,74,32,0)");
       ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(vx, vy, vr, 0, Math.PI * 2); ctx.fill();
     }
-    // 破風沿いの石帯 + 歯飾り（デンティル）
     function drawRake(x1, y1, x2, y2) {
       ctx.strokeStyle = "#cfc2a8";
       ctx.lineWidth = 16;
@@ -367,9 +435,8 @@
       var steps = 13;
       for (var t = 1; t < steps; t++) {
         var f = t / steps;
-        var px = x1 + (x2 - x1) * f, py = y1 + (y2 - y1) * f;
         ctx.fillStyle = "#c4b696";
-        ctx.fillRect(px - 7, py + 10, 14, 14);
+        ctx.fillRect(x1 + (x2 - x1) * f - 7, y1 + (y2 - y1) * f + 10, 14, 14);
       }
     }
     var valleyY = (1 - 0.15) * S;
@@ -382,6 +449,7 @@
     }
     var tex = new THREE.CanvasTexture(c);
     tex.encoding = THREE.sRGBEncoding;
+    tex.anisotropy = MAX_ANISO;
     return tex;
   }
 
@@ -389,40 +457,73 @@
   // その他テクスチャ
   // ---------------------------------------------------------------
   function makeRoofTexture() {
-    var c = makeCanvas(128, 128);
+    var S = 256;
+    var c = makeCanvas(S, S);
     var ctx = c.getContext("2d");
-    ctx.fillStyle = "#798086"; ctx.fillRect(0, 0, 128, 128);
-    for (var x = 0; x < 128; x += 8) {
-      ctx.fillStyle = (x / 8) % 2 === 0 ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)";
-      ctx.fillRect(x, 0, 4, 128);
+    var base = ctx.createLinearGradient(0, 0, 0, S);
+    base.addColorStop(0, "#868d93");
+    base.addColorStop(1, "#6e757b");
+    ctx.fillStyle = base; ctx.fillRect(0, 0, S, S);
+    for (var x = 0; x < S; x += 16) {
+      ctx.fillStyle = "rgba(255,255,255,0.10)"; ctx.fillRect(x, 0, 2, S);
+      ctx.fillStyle = "rgba(0,0,0,0.18)"; ctx.fillRect(x + 2, 0, 2, S);
+      ctx.fillStyle = "rgba(0,0,0,0.05)"; ctx.fillRect(x + 9, 0, 4, S);
     }
-    ctx.strokeStyle = "rgba(0,0,0,0.12)"; ctx.lineWidth = 1;
-    for (var y = 0; y < 128; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(128, y); ctx.stroke(); }
+    for (var st = 0; st < 10; st++) {
+      ctx.fillStyle = "rgba(120,90,60," + rand(0.03, 0.1) + ")";
+      var sx = rand(0, S);
+      ctx.fillRect(sx, rand(0, S * 0.4), rand(3, 9), rand(S * 0.3, S * 0.7));
+    }
     var tex = new THREE.CanvasTexture(c);
     tex.encoding = THREE.sRGBEncoding;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.anisotropy = MAX_ANISO;
+    return tex;
+  }
+  function makeRoofBump() {
+    var S = 256;
+    var c = makeCanvas(S, S);
+    var ctx = c.getContext("2d");
+    ctx.fillStyle = "#707070"; ctx.fillRect(0, 0, S, S);
+    for (var x = 0; x < S; x += 16) {
+      ctx.fillStyle = "#c8c8c8"; ctx.fillRect(x, 0, 3, S);
+      ctx.fillStyle = "#404040"; ctx.fillRect(x + 3, 0, 2, S);
+    }
+    var tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     return tex;
   }
 
   function makeGroundTexture() {
-    var c = makeCanvas(512, 512);
+    var S = 1024;
+    var c = makeCanvas(S, S);
     var ctx = c.getContext("2d");
-    ctx.fillStyle = "#516e37"; ctx.fillRect(0, 0, 512, 512);
-    for (var i = 0; i < 12000; i++) {
-      ctx.fillStyle = "hsl(" + (88 + rand(-16, 16)) + "," + (34 + rand(-10, 10)) + "%," + (28 + Math.random() * 26) + "%)";
-      ctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
+    ctx.fillStyle = "#55703a"; ctx.fillRect(0, 0, S, S);
+    // 大きなムラ（刈った草地の色変化）
+    for (var m = 0; m < 30; m++) {
+      var mx = rand(0, S), my = rand(0, S), mr = rand(60, 220);
+      var mg = ctx.createRadialGradient(mx, my, 0, mx, my, mr);
+      var col = Math.random() < 0.5 ? "150,160,90" : "70,95,50";
+      mg.addColorStop(0, "rgba(" + col + "," + rand(0.15, 0.35) + ")");
+      mg.addColorStop(1, "rgba(" + col + ",0)");
+      ctx.fillStyle = mg;
+      ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI * 2); ctx.fill();
     }
-    for (var k = 0; k < 40; k++) {
-      var bx = Math.random() * 512, by = Math.random() * 512, rr = rand(20, 70);
+    for (var i = 0; i < 26000; i++) {
+      ctx.fillStyle = "hsl(" + (88 + rand(-18, 18)) + "," + (34 + rand(-10, 10)) + "%," + (26 + Math.random() * 28) + "%)";
+      ctx.fillRect(Math.random() * S, Math.random() * S, 2, 2);
+    }
+    for (var k = 0; k < 50; k++) {
+      var bx = Math.random() * S, by = Math.random() * S, rr = rand(15, 60);
       var g = ctx.createRadialGradient(bx, by, 0, bx, by, rr);
-      g.addColorStop(0, "rgba(90,72,45,0.35)"); g.addColorStop(1, "rgba(90,72,45,0)");
+      g.addColorStop(0, "rgba(92,74,46,0.4)"); g.addColorStop(1, "rgba(92,74,46,0)");
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI * 2); ctx.fill();
     }
     var tex = new THREE.CanvasTexture(c);
     tex.encoding = THREE.sRGBEncoding;
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(0.125, 0.125);
-    tex.anisotropy = 8;
+    tex.repeat.set(0.08, 0.08);
+    tex.anisotropy = MAX_ANISO;
     return tex;
   }
 
@@ -445,34 +546,40 @@
     var tex = new THREE.CanvasTexture(c);
     tex.encoding = THREE.sRGBEncoding;
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.anisotropy = MAX_ANISO;
     return tex;
   }
 
   function makeRoadTexture() {
-    var c = makeCanvas(128, 256);
+    // 道路は x 方向に走る: ダッシュは横向き
+    var c = makeCanvas(256, 128);
     var ctx = c.getContext("2d");
-    ctx.fillStyle = "#3c3d40"; ctx.fillRect(0, 0, 128, 256);
+    ctx.fillStyle = "#3c3d40"; ctx.fillRect(0, 0, 256, 128);
     for (var i = 0; i < 1500; i++) {
       ctx.fillStyle = "rgba(255,255,255," + rand(0.02, 0.06) + ")";
-      ctx.fillRect(Math.random() * 128, Math.random() * 256, 1.5, 1.5);
+      ctx.fillRect(Math.random() * 256, Math.random() * 128, 1.5, 1.5);
     }
     ctx.fillStyle = "rgba(235,235,225,0.85)";
-    ctx.fillRect(61, 10, 6, 60);
-    ctx.fillRect(61, 130, 6, 60);
+    ctx.fillRect(10, 61, 60, 6);
+    ctx.fillRect(130, 61, 60, 6);
+    // 端の白線
+    ctx.fillRect(0, 6, 256, 4);
+    ctx.fillRect(0, 118, 256, 4);
     var tex = new THREE.CanvasTexture(c);
     tex.encoding = THREE.sRGBEncoding;
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(1, 16);
+    tex.repeat.set(10, 1);
+    tex.anisotropy = MAX_ANISO;
     return tex;
   }
 
   function makeGrassBladeTexture() {
     var c = makeCanvas(64, 64);
     var ctx = c.getContext("2d");
-    for (var i = 0; i < 8; i++) {
-      var x = 6 + i * 7 + rand(-2, 2), h = rand(34, 58), base = 63;
+    for (var i = 0; i < 9; i++) {
+      var x = 5 + i * 6.5 + rand(-2, 2), h = rand(34, 58), base = 63;
       ctx.strokeStyle = hsl(96 + rand(-16, 16), 52, 34 + rand(-8, 12));
-      ctx.lineWidth = rand(1.8, 3.4);
+      ctx.lineWidth = rand(1.8, 3.2);
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.moveTo(x, base);
@@ -484,15 +591,63 @@
     return tex;
   }
 
-  function makeSkyTexture() {
-    var c = makeCanvas(8, 320);
+  // 空: 雲 + 山並みシルエット入りのドームテクスチャ
+  function makeSkyDomeTexture() {
+    var W = 1024, H = 512;
+    var c = makeCanvas(W, H);
     var ctx = c.getContext("2d");
-    var g = ctx.createLinearGradient(0, 0, 0, 320);
-    g.addColorStop(0, "#3f6f9f");
-    g.addColorStop(0.45, "#7ba3c4");
-    g.addColorStop(0.75, "#c3d4dd");
-    g.addColorStop(1, "#e7ece6");
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 8, 320);
+    var g = ctx.createLinearGradient(0, 0, 0, H * 0.62);
+    g.addColorStop(0, "#3e6f9e");
+    g.addColorStop(0.55, "#7aa3c2");
+    g.addColorStop(1, "#cddbe2");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H * 0.62);
+    ctx.fillStyle = "#dfe4e0";
+    ctx.fillRect(0, H * 0.62, W, H * 0.38);
+    // 雲（水平方向につながるよう左右端もカバー）
+    function cloud(cx, cy, scale, alpha) {
+      for (var b = 0; b < 7; b++) {
+        var bx = cx + rand(-60, 60) * scale;
+        var by = cy + rand(-12, 12) * scale;
+        var br = rand(22, 55) * scale;
+        var cg = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+        cg.addColorStop(0, "rgba(255,255,255," + alpha + ")");
+        cg.addColorStop(0.7, "rgba(250,250,252," + (alpha * 0.5) + ")");
+        cg.addColorStop(1, "rgba(250,250,252,0)");
+        ctx.fillStyle = cg;
+        ctx.save();
+        ctx.translate(bx, by);
+        ctx.scale(1, 0.45);
+        ctx.beginPath(); ctx.arc(0, 0, br, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+    }
+    for (var cl = 0; cl < 22; cl++) {
+      cloud(rand(0, W), rand(40, 230), rand(0.7, 1.7), rand(0.18, 0.5));
+    }
+    // 山並み（地平線）
+    ctx.fillStyle = "rgba(96,116,124,0.85)";
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.62);
+    var my = H * 0.585;
+    for (var mx = 0; mx <= W; mx += 40) {
+      my = clamp(my + rand(-14, 14), H * 0.555, H * 0.615);
+      ctx.lineTo(mx, my);
+    }
+    ctx.lineTo(W, H * 0.62);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "rgba(120,140,140,0.5)";
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.62);
+    my = H * 0.6;
+    for (var mx2 = 0; mx2 <= W; mx2 += 60) {
+      my = clamp(my + rand(-10, 10), H * 0.575, H * 0.62);
+      ctx.lineTo(mx2, my);
+    }
+    ctx.lineTo(W, H * 0.62);
+    ctx.closePath();
+    ctx.fill();
     var tex = new THREE.CanvasTexture(c);
     tex.encoding = THREE.sRGBEncoding;
     return tex;
@@ -526,35 +681,63 @@
   }
 
   // ---------------------------------------------------------------
-  // シーン
+  // レンダラ・シーン・ライト
   // ---------------------------------------------------------------
-  var scene = new THREE.Scene();
-  scene.background = makeSkyTexture();
-  scene.fog = new THREE.Fog(0xbcccd4, 80, 300);
-
-  var camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 700);
-
   var renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
+  var MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
 
-  scene.add(new THREE.HemisphereLight(0xc4d8e4, 0x50452f, 1.0));
-  var sun = new THREE.DirectionalLight(0xfff3e2, 1.0);
-  sun.position.set(50, 90, 20);
+  var scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0xc8d4da, 42, 115);
+
+  var camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 900);
+
+  // 空ドーム
+  var skyDome = new THREE.Mesh(
+    new THREE.SphereGeometry(380, 32, 20),
+    new THREE.MeshBasicMaterial({ map: makeSkyDomeTexture(), side: THREE.BackSide, fog: false })
+  );
+  skyDome.userData.shadow = "none";
+  scene.add(skyDome);
+
+  scene.add(new THREE.HemisphereLight(0xc4d8e4, 0x50452f, 0.85));
+  var sun = new THREE.DirectionalLight(0xfff3e2, 1.15);
+  sun.position.set(45, 70, -35);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -55;
+  sun.shadow.camera.right = 55;
+  sun.shadow.camera.top = 60;
+  sun.shadow.camera.bottom = -60;
+  sun.shadow.camera.near = 10;
+  sun.shadow.camera.far = 250;
+  sun.shadow.bias = -0.0004;
+  sun.shadow.normalBias = 0.02;
   scene.add(sun);
-  scene.add(new THREE.AmbientLight(0x404850, 0.4));
+  scene.add(new THREE.AmbientLight(0x404850, 0.25));
 
-  // 地面（貯水池の位置に穴をあける）
-  var BASIN = { minX: 16, maxX: 34, minZ: 4, maxZ: 32, inMinX: 19, inMaxX: 31, inMinZ: 7, inMaxZ: 29, bottomY: -1.7 };
+  // ---------------------------------------------------------------
+  // 敷地レイアウト（実物準拠・コンパクト）
+  //   建物: x -9.2..9.2, z 0..36（正面妻壁が -z 向き）
+  //   貯水池: 東(+x)の長辺すぐ隣 / 道路: 正面(-z)のすぐ前を x 方向に
+  // ---------------------------------------------------------------
+  var BASIN = { minX: 12.5, maxX: 30, minZ: 1, maxZ: 35, inMinX: 15.5, inMaxX: 27, inMinZ: 4, inMaxZ: 32, bottomY: -1.7 };
+
+  // 地面は霧で消える程度に広く取る（世界の端は fog(far=115) で見えない）。
+  // 「狭さ」はフェンスと小物の密度で出す（地面サイズは見た目に影響しない）。
   var groundShape = new THREE.Shape();
-  groundShape.moveTo(-200, -200);
-  groundShape.lineTo(200, -200);
-  groundShape.lineTo(200, 200);
-  groundShape.lineTo(-200, 200);
+  groundShape.moveTo(-150, -170);
+  groundShape.lineTo(170, -170);
+  groundShape.lineTo(170, 150);
+  groundShape.lineTo(-150, 150);
   var basinHole = new THREE.Path();
-  // world z = -shape.y のため、z:[4,32] は shape.y:[-32,-4]
   basinHole.moveTo(BASIN.minX, -BASIN.maxZ);
   basinHole.lineTo(BASIN.maxX, -BASIN.maxZ);
   basinHole.lineTo(BASIN.maxX, -BASIN.minZ);
@@ -565,6 +748,7 @@
     new THREE.MeshStandardMaterial({ map: makeGroundTexture(), roughness: 1, side: THREE.DoubleSide })
   );
   ground.rotation.x = -Math.PI / 2;
+  ground.userData.shadow = "receive";
   scene.add(ground);
 
   // ---------------------------------------------------------------
@@ -586,24 +770,20 @@
     for (var i = 0; i < n; i++) {
       var cx = 0.07 + (i / (n - 1)) * 0.86;
       arr.push({ cxFrac: cx, topFrac: 0.32, wFrac: 0.055, hFrac: 0.5, style: "arch" });
-      // 上部の小アーチ帯（各ベイに2つ）
       arr.push({ cxFrac: cx - 0.017, topFrac: 0.08, wFrac: 0.014, hFrac: 0.13, style: "smallarch" });
       arr.push({ cxFrac: cx + 0.017, topFrac: 0.08, wFrac: 0.014, hFrac: 0.13, style: "smallarch" });
     }
     return arr;
   }
 
-  // 東側（貯水池向き・写真3）: レンガ主体
   var texEast = makeBrickWallTexture({
     wallId: "east", realW: BUILD_LEN, realH: WALL_H,
     windows: makeLongWallWindows(), nameProb: 0.06, ivyDensity: 12, plaster: 0.15
   });
-  // 西側（写真2）: 蔦が濃い
   var texWest = makeBrickWallTexture({
     wallId: "west", realW: BUILD_LEN, realH: WALL_H,
-    windows: makeLongWallWindows(), nameProb: 0.06, ivyDensity: 45, plaster: 0.1
+    windows: makeLongWallWindows(), nameProb: 0.06, ivyDensity: 40, plaster: 0.1
   });
-  // 正面（写真1）: 漆喰まだら・小扉・埋めアーチ
   var texFront = makeBrickWallTexture({
     wallId: "front", realW: TOTAL_W, realH: WALL_H,
     windows: [
@@ -614,24 +794,21 @@
     nameProb: 0.06, ivyDensity: 8, plaster: 0.75,
     featured: [{ y_m: 1.6, xFrac: 0.56, donor: FEATURED_EXEMATE }]
   });
-  // 背面: 蔦多め
   var texBack = makeBrickWallTexture({
     wallId: "back", realW: TOTAL_W, realH: WALL_H,
     windows: [], nameProb: 0.05, ivyDensity: 25, plaster: 0.3
   });
   var flatBrick = new THREE.MeshStandardMaterial({ color: 0x51473b, roughness: 0.95 });
 
+  function wallMat(t) {
+    return new THREE.MeshStandardMaterial({ map: t.map, bumpMap: t.bump, bumpScale: 0.25, roughness: 0.95 });
+  }
   var wallBox = new THREE.Mesh(new THREE.BoxGeometry(TOTAL_W, WALL_H, BUILD_LEN), [
-    new THREE.MeshStandardMaterial({ map: texEast, roughness: 0.95 }),  // +x
-    new THREE.MeshStandardMaterial({ map: texWest, roughness: 0.95 }),  // -x
-    flatBrick, flatBrick,
-    new THREE.MeshStandardMaterial({ map: texBack, roughness: 0.95 }),  // +z
-    new THREE.MeshStandardMaterial({ map: texFront, roughness: 0.95 })  // -z
+    wallMat(texEast), wallMat(texWest), flatBrick, flatBrick, wallMat(texBack), wallMat(texFront)
   ]);
   wallBox.position.set(0, WALL_H / 2, BUILD_LEN / 2);
   buildingGroup.add(wallBox);
 
-  // レイキャスト用の面情報（BoxGeometry の UV 方向は実測定義）
   var wallFaceInfo = {
     0: { wallId: "east", label: "E", realW: BUILD_LEN, realH: WALL_H, uDir: new THREE.Vector3(0, 0, -1), normal: new THREE.Vector3(1, 0, 0), rotY: Math.PI / 2 },
     1: { wallId: "west", label: "W", realW: BUILD_LEN, realH: WALL_H, uDir: new THREE.Vector3(0, 0, 1), normal: new THREE.Vector3(-1, 0, 0), rotY: -Math.PI / 2 },
@@ -639,32 +816,33 @@
     5: { wallId: "front", label: "F", realW: TOTAL_W, realH: WALL_H, uDir: new THREE.Vector3(-1, 0, 0), normal: new THREE.Vector3(0, 0, -1), rotY: Math.PI }
   };
 
-  // 屋根
-  var roofMat = new THREE.MeshStandardMaterial({ map: makeRoofTexture(), roughness: 0.55, metalness: 0.2 });
+  var roofColorTex = makeRoofTexture();
+  var roofBumpTex = makeRoofBump();
+  function roofMaterial() {
+    return new THREE.MeshStandardMaterial({ map: roofColorTex, bumpMap: roofBumpTex, bumpScale: 0.15, roughness: 0.5, metalness: 0.25 });
+  }
   function addRoofSlope(xEave, xRidge, yEave, yRidge) {
     var slopeLen = Math.hypot(xRidge - xEave, yRidge - yEave);
     buildingGroup.add(makeQuadMesh(
       [xEave, yEave, 0], [xRidge, yRidge, 0], [xRidge, yRidge, BUILD_LEN], [xEave, yEave, BUILD_LEN],
-      roofMat.clone(), BUILD_LEN / 3, slopeLen / 1.2));
+      roofMaterial(), BUILD_LEN / 3, slopeLen / 1.2));
   }
   addRoofSlope(-SHED_HW * 2, -SHED_HW, WALL_H, APEX_Y);
   addRoofSlope(0, -SHED_HW, VALLEY_H, APEX_Y);
   addRoofSlope(SHED_HW * 2, SHED_HW, WALL_H, APEX_Y);
   addRoofSlope(0, SHED_HW, VALLEY_H, APEX_Y);
 
-  // 越屋根（明かり取り）
   function addClerestory(x) {
     var body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.7, 22), new THREE.MeshStandardMaterial({ color: 0xdfe2e5, roughness: 0.6 }));
     body.position.set(x, APEX_Y + 0.35, BUILD_LEN / 2);
     buildingGroup.add(body);
-    var cap = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.15, 22.8), new THREE.MeshStandardMaterial({ color: 0x798086, roughness: 0.55, metalness: 0.2 }));
+    var cap = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.15, 22.8), roofMaterial());
     cap.position.set(x, APEX_Y + 0.77, BUILD_LEN / 2);
     buildingGroup.add(cap);
   }
   addClerestory(-SHED_HW);
   addClerestory(SHED_HW);
 
-  // 妻壁
   var gableFL = makeGableTriTexture("circle", false, 0.6);
   var gableFR = makeGableTriTexture("arch", true, 0.55);
   var gableBL = makeGableTriTexture("plain", false, 0.25);
@@ -674,8 +852,7 @@
     var p1 = [xOuter, WALL_H, z], p2 = [xRidge, APEX_Y, z], p3 = [0, VALLEY_H, z];
     var mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, side: THREE.DoubleSide });
     var minX = Math.min(xOuter, xRidge, 0), maxX = Math.max(xOuter, xRidge, 0);
-    var minY = WALL_H, maxY = APEX_Y;
-    function uv(p) { return [(p[0] - minX) / (maxX - minX), (p[1] - minY) / (maxY - minY)]; }
+    function uv(p) { return [(p[0] - minX) / (maxX - minX), (p[1] - WALL_H) / ROOF_H]; }
     buildingGroup.add(makeTriMesh(p1, p2, p3, mat, uv(p1), uv(p2), uv(p3)));
   }
   addGableTri(-SHED_HW * 2, -SHED_HW, 0, gableFL);
@@ -683,7 +860,6 @@
   addGableTri(-SHED_HW * 2, -SHED_HW, BUILD_LEN, gableBL);
   addGableTri(SHED_HW * 2, SHED_HW, BUILD_LEN, gableBR);
 
-  // 四隅の付柱（石帽子つき）+ 正面中央バットレス
   var pilasterMat = new THREE.MeshStandardMaterial({ color: 0x7a6350, roughness: 0.9 });
   var capMat = new THREE.MeshStandardMaterial({ color: 0xcfc2a8, roughness: 0.85 });
   function addPilaster(x, z, h) {
@@ -698,7 +874,6 @@
   addPilaster(TOTAL_W / 2, 0.05, WALL_H + 0.7);
   addPilaster(-TOTAL_W / 2, BUILD_LEN - 0.05, WALL_H + 0.7);
   addPilaster(TOTAL_W / 2, BUILD_LEN - 0.05, WALL_H + 0.7);
-  // 正面中央（谷部）のバットレス
   var centerBut = new THREE.Mesh(new THREE.BoxGeometry(0.9, VALLEY_H + 0.35, 0.55), pilasterMat);
   centerBut.position.set(0, (VALLEY_H + 0.35) / 2, -0.12);
   buildingGroup.add(centerBut);
@@ -706,7 +881,7 @@
   centerCap.position.set(0, VALLEY_H + 0.45, -0.12);
   buildingGroup.add(centerCap);
 
-  // 避雷針マスト（両妻の頂部・前後）+ 渡り線
+  // 避雷針マスト + 渡り線
   var mastMat = new THREE.MeshStandardMaterial({ color: 0x4a3226, roughness: 0.7, metalness: 0.3 });
   var mastTops = { front: [], back: [] };
   function addMast(x, z, side) {
@@ -733,7 +908,6 @@
     scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(16)), wireMat));
   });
 
-  // 煙突・雨樋・消火栓箱
   function addChimney(x, z) {
     var base = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.2, 0.9), new THREE.MeshStandardMaterial({ color: 0x6b4230, roughness: 0.9 }));
     base.position.set(x, APEX_Y + 0.6, z);
@@ -752,7 +926,7 @@
   fireBox.position.set(2.6, 0.4, -0.7);
   buildingGroup.add(fireBox);
 
-  // 正面右の低い附属屋（赤レンガ・写真1右）
+  // 正面右の赤レンガ附属屋
   var annexTex = makeBrickWallTexture({
     realW: 6.4, realH: 2.6, windows: [], door: { cxFrac: 0.45, wFrac: 0.22, hFrac: 0.72 },
     nameProb: 0, ivyDensity: 6, plaster: 0.1
@@ -760,7 +934,7 @@
   var annexSideMat = new THREE.MeshStandardMaterial({ color: 0x84503c, roughness: 0.95 });
   var annex = new THREE.Mesh(new THREE.BoxGeometry(6.4, 2.6, 3.2), [
     annexSideMat, annexSideMat, flatBrick, flatBrick, annexSideMat,
-    new THREE.MeshStandardMaterial({ map: annexTex, roughness: 0.95 })
+    new THREE.MeshStandardMaterial({ map: annexTex.map, bumpMap: annexTex.bump, bumpScale: 0.25, roughness: 0.95 })
   ]);
   annex.position.set(6.2, 1.3, -1.6);
   buildingGroup.add(annex);
@@ -768,57 +942,90 @@
   annexRoof.position.set(6.2, 2.66, -1.6);
   buildingGroup.add(annexRoof);
 
+  // 建物足元の接地影（AOストリップ）
+  var aoCanvas = makeCanvas(32, 32);
+  (function () {
+    var actx = aoCanvas.getContext("2d");
+    var ag = actx.createLinearGradient(0, 0, 0, 32);
+    ag.addColorStop(0, "rgba(0,0,0,0)");     // canvas上 = v=1 (遠い側)
+    ag.addColorStop(1, "rgba(0,0,0,0.42)");  // canvas下 = v=0 (壁側)
+    actx.fillStyle = ag;
+    actx.fillRect(0, 0, 32, 32);
+  })();
+  var aoTex = new THREE.CanvasTexture(aoCanvas);
+  function addAOStrip(cx, cz, len, theta) {
+    var mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(len, 1.4),
+      new THREE.MeshBasicMaterial({ map: aoTex, transparent: true, depthWrite: false })
+    );
+    mesh.rotation.set(-Math.PI / 2, 0, theta);
+    mesh.position.set(cx, 0.02, cz);
+    mesh.userData.shadow = "none";
+    scene.add(mesh);
+  }
+  addAOStrip(0, -0.7, TOTAL_W + 2, 0);                    // 正面（暗部が+z=壁側）
+  addAOStrip(0, BUILD_LEN + 0.7, TOTAL_W + 2, Math.PI);   // 背面
+  addAOStrip(TOTAL_W / 2 + 0.7, BUILD_LEN / 2, BUILD_LEN, -Math.PI / 2); // 東
+  addAOStrip(-TOTAL_W / 2 - 0.7, BUILD_LEN / 2, BUILD_LEN, Math.PI / 2); // 西
+
   // ---------------------------------------------------------------
-  // 貯水池（東側）: 護岸・水面・フェンス・黄手すり
+  // 貯水池（東の長辺すぐ隣・写真3進拠）
   // ---------------------------------------------------------------
   var concreteTex = makeConcreteTexture();
-  var concreteMat = new THREE.MeshStandardMaterial({ map: concreteTex, roughness: 0.95 });
+  function concreteMaterial() {
+    return new THREE.MeshStandardMaterial({ map: concreteTex, roughness: 0.95 });
+  }
   var B = BASIN;
-  scene.add(makeQuadMesh([B.minX, 0, B.minZ], [B.maxX, 0, B.minZ], [B.inMaxX, B.bottomY, B.inMinZ], [B.inMinX, B.bottomY, B.inMinZ], concreteMat.clone(), 4, 1));
-  scene.add(makeQuadMesh([B.maxX, 0, B.maxZ], [B.minX, 0, B.maxZ], [B.inMinX, B.bottomY, B.inMaxZ], [B.inMaxX, B.bottomY, B.inMaxZ], concreteMat.clone(), 4, 1));
-  scene.add(makeQuadMesh([B.minX, 0, B.maxZ], [B.minX, 0, B.minZ], [B.inMinX, B.bottomY, B.inMinZ], [B.inMinX, B.bottomY, B.inMaxZ], concreteMat.clone(), 4, 1));
-  scene.add(makeQuadMesh([B.maxX, 0, B.minZ], [B.maxX, 0, B.maxZ], [B.inMaxX, B.bottomY, B.inMaxZ], [B.inMaxX, B.bottomY, B.inMinZ], concreteMat.clone(), 4, 1));
+  [
+    [[B.minX, 0, B.minZ], [B.maxX, 0, B.minZ], [B.inMaxX, B.bottomY, B.inMinZ], [B.inMinX, B.bottomY, B.inMinZ]],
+    [[B.maxX, 0, B.maxZ], [B.minX, 0, B.maxZ], [B.inMinX, B.bottomY, B.inMaxZ], [B.inMaxX, B.bottomY, B.inMaxZ]],
+    [[B.minX, 0, B.maxZ], [B.minX, 0, B.minZ], [B.inMinX, B.bottomY, B.inMinZ], [B.inMinX, B.bottomY, B.inMaxZ]],
+    [[B.maxX, 0, B.minZ], [B.maxX, 0, B.maxZ], [B.inMaxX, B.bottomY, B.inMaxZ], [B.inMaxX, B.bottomY, B.inMinZ]]
+  ].forEach(function (q) {
+    var m = makeQuadMesh(q[0], q[1], q[2], q[3], concreteMaterial(), 5, 1);
+    m.userData.shadow = "receive";
+    scene.add(m);
+  });
   var water = new THREE.Mesh(
     new THREE.PlaneGeometry(B.inMaxX - B.inMinX, B.inMaxZ - B.inMinZ),
-    new THREE.MeshStandardMaterial({ color: 0x3d5a52, roughness: 0.15, metalness: 0.1 })
+    new THREE.MeshStandardMaterial({ color: 0x39544d, roughness: 0.08, metalness: 0.25 })
   );
   water.rotation.x = -Math.PI / 2;
-  water.position.set((B.inMinX + B.inMaxX) / 2, B.bottomY + 0.45, (B.inMinZ + B.inMaxZ) / 2);
+  water.position.set((B.inMinX + B.inMaxX) / 2, B.bottomY + 0.55, (B.inMinZ + B.inMaxZ) / 2);
+  water.userData.shadow = "receive";
   scene.add(water);
 
-  // 有刺鉄線フェンス（貯水池の周囲）
+  // 貯水池フェンス（有刺鉄線）
   (function addBasinFence() {
     var postMat = new THREE.MeshStandardMaterial({ color: 0x8f969b, roughness: 0.5, metalness: 0.5 });
-    var m = 0.7;
+    var m = 0.6;
     var corners = [
       [B.minX - m, B.minZ - m], [B.maxX + m, B.minZ - m],
       [B.maxX + m, B.maxZ + m], [B.minX - m, B.maxZ + m]
     ];
-    var wireLineMat = new THREE.LineBasicMaterial({ color: 0x777d80 });
+    var wl = new THREE.LineBasicMaterial({ color: 0x777d80 });
     for (var e = 0; e < 4; e++) {
       var a = corners[e], b = corners[(e + 1) % 4];
       var len = Math.hypot(b[0] - a[0], b[1] - a[1]);
       var nPosts = Math.max(2, Math.round(len / 3.2));
       for (var i = 0; i <= nPosts; i++) {
         var t = i / nPosts;
-        var px = a[0] + (b[0] - a[0]) * t, pz = a[1] + (b[1] - a[1]) * t;
         var post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.15, 6), postMat);
-        post.position.set(px, 0.575, pz);
+        post.position.set(a[0] + (b[0] - a[0]) * t, 0.575, a[1] + (b[1] - a[1]) * t);
         scene.add(post);
       }
       [0.5, 0.8, 1.1].forEach(function (h) {
-        var geo = new THREE.BufferGeometry().setFromPoints([
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
           new THREE.Vector3(a[0], h, a[1]), new THREE.Vector3(b[0], h, b[1])
-        ]);
-        scene.add(new THREE.Line(geo, wireLineMat));
+        ]), wl));
       });
     }
   })();
 
-  // 黄色い手すり（建屋と貯水池の間）
+  // 黄色い手すり（東壁と貯水池の間・壁のすぐ脇）
   (function addYellowRail() {
     var railMat = new THREE.MeshStandardMaterial({ color: 0xd9b422, roughness: 0.6, metalness: 0.2 });
-    var x = 13.2, z0 = 4, z1 = 32;
+    var x = 11.2, z0 = 1, z1 = 35;
     var n = Math.round((z1 - z0) / 2.8);
     for (var i = 0; i <= n; i++) {
       var post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.0, 8), railMat);
@@ -832,8 +1039,8 @@
     });
   })();
 
-  // 鉄塔やぐら（東壁沿い・写真3）
-  function addTower(x, z) {
+  // 鉄塔やぐら（東壁沿い）
+  function addTowerLattice(x, z) {
     var mat = new THREE.MeshStandardMaterial({ color: 0x9a7a2a, roughness: 0.7, metalness: 0.3 });
     [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]].forEach(function (o) {
       var post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 6.5, 6), mat);
@@ -851,35 +1058,131 @@
     top.position.set(x, 6.55, z);
     scene.add(top);
   }
-  addTower(10.6, 12);
-  addTower(10.6, 22);
+  addTowerLattice(10.1, 11);
+  addTowerLattice(10.1, 23);
 
-  // 水タンク
+  // 東壁沿いの白い制御盤ボックス
+  var ctrlBox = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.0, 1.1), new THREE.MeshStandardMaterial({ color: 0xdcd9d2, roughness: 0.7 }));
+  ctrlBox.position.set(10.2, 1.0, 17);
+  scene.add(ctrlBox);
+
+  // 配管（東壁から貯水池へ下る）+ バルブ
+  var pipeMat = new THREE.MeshStandardMaterial({ color: 0x6a6f74, roughness: 0.5, metalness: 0.5 });
+  function addBasinPipe(z) {
+    var hor = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 4.2, 8), pipeMat);
+    hor.rotation.z = -Math.PI / 2;
+    hor.position.set(11.3, 0.45, z);
+    scene.add(hor);
+    var slope = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 3.2, 8), pipeMat);
+    slope.rotation.z = -Math.PI / 2 - 0.5;
+    slope.position.set(14.7, -0.25, z);
+    scene.add(slope);
+    var wheel = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.035, 8, 16), new THREE.MeshStandardMaterial({ color: 0x8a3020, roughness: 0.6, metalness: 0.3 }));
+    wheel.rotation.y = Math.PI / 2;
+    wheel.position.set(10.6, 0.75, z);
+    scene.add(wheel);
+  }
+  addBasinPipe(14);
+  addBasinPipe(26);
+
+  // 正面の古い配管・バルブ（写真1の手前）
+  var fpipe = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.0, 8), pipeMat);
+  fpipe.position.set(3.2, 0.5, -1.5);
+  scene.add(fpipe);
+  var fwheel = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.035, 8, 16), new THREE.MeshStandardMaterial({ color: 0x8a3020, roughness: 0.6, metalness: 0.3 }));
+  fwheel.rotation.x = Math.PI / 2;
+  fwheel.position.set(3.2, 1.05, -1.5);
+  scene.add(fwheel);
+
+  // 水タンク（北東・写真3左手）
   var tank = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 2.4, 16), new THREE.MeshStandardMaterial({ color: 0x6e4a30, roughness: 0.8 }));
-  tank.position.set(24, 1.2, 37.5);
+  tank.position.set(20, 1.2, 39.5);
   scene.add(tank);
 
   // ---------------------------------------------------------------
-  // 道路・土間・周辺の建物
+  // 道路（正面のすぐ前を横切る・県道73号相当）+ 電柱
   // ---------------------------------------------------------------
-  var road = new THREE.Mesh(new THREE.PlaneGeometry(8, 180), new THREE.MeshStandardMaterial({ map: makeRoadTexture(), roughness: 0.95 }));
+  var road = new THREE.Mesh(new THREE.PlaneGeometry(140, 8), new THREE.MeshStandardMaterial({ map: makeRoadTexture(), roughness: 0.95 }));
   road.rotation.x = -Math.PI / 2;
-  road.position.set(-42, 0.03, 10);
+  road.position.set(0, 0.03, -17);
+  road.userData.shadow = "receive";
   scene.add(road);
-  var sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 180), new THREE.MeshStandardMaterial({ color: 0xa8a49a, roughness: 0.95 }));
+  var sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(140, 1.8), new THREE.MeshStandardMaterial({ color: 0xa8a49a, roughness: 0.95 }));
   sidewalk.rotation.x = -Math.PI / 2;
-  sidewalk.position.set(-36.9, 0.025, 10);
+  sidewalk.position.set(0, 0.025, -12.1);
+  sidewalk.userData.shadow = "receive";
   scene.add(sidewalk);
 
-  var apron = new THREE.Mesh(new THREE.PlaneGeometry(18, 26), concreteMat.clone());
-  apron.rotation.x = -Math.PI / 2;
-  apron.position.set(42, 0.02, -2);
-  scene.add(apron);
-  var path = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 18), concreteMat.clone());
+  // 門から正面扉への通路（扉は x≈0.9）
+  var path = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 11), concreteMaterial());
   path.rotation.x = -Math.PI / 2;
-  path.position.set(1.5, 0.02, -9);
+  path.position.set(0.9, 0.02, -5.5);
+  path.userData.shadow = "receive";
   scene.add(path);
 
+  // 電柱（道路沿い）+ 電線
+  var poleMat = new THREE.MeshStandardMaterial({ color: 0x8a8a86, roughness: 0.8 });
+  var poleTops = [];
+  [-32, -14, 4, 22, 40].forEach(function (px) {
+    var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.19, 9.5, 8), poleMat);
+    pole.position.set(px, 4.75, -22);
+    scene.add(pole);
+    var arm = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.13, 0.13), new THREE.MeshStandardMaterial({ color: 0x5a3a24 }));
+    arm.position.set(px, 8.6, -22);
+    scene.add(arm);
+    var arm2 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.11, 0.11), new THREE.MeshStandardMaterial({ color: 0x5a3a24 }));
+    arm2.position.set(px, 7.7, -22);
+    scene.add(arm2);
+    poleTops.push(new THREE.Vector3(px, 8.9, -22));
+  });
+  for (var pw = 0; pw < poleTops.length - 1; pw++) {
+    [-0.9, -0.3, 0.3, 0.9].forEach(function (off) {
+      var a = poleTops[pw].clone().add(new THREE.Vector3(off, 0, 0));
+      var b = poleTops[pw + 1].clone().add(new THREE.Vector3(off, 0, 0));
+      var mid = a.clone().lerp(b, 0.5); mid.y -= 0.9;
+      var curve = new THREE.QuadraticBezierCurve3(a, mid, b);
+      scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(14)), wireMat));
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // 敷地フェンス（コンクリ支柱 + 有刺鉄線、正面に門）
+  // ---------------------------------------------------------------
+  var SITE = { minX: -15, maxX: 33, minZ: -9, maxZ: 44, gateX0: -1, gateX1: 4 };
+  (function addSiteFence() {
+    var postMat = new THREE.MeshStandardMaterial({ color: 0xb5b0a4, roughness: 0.9 });
+    var wl = new THREE.LineBasicMaterial({ color: 0x6f757a });
+    function fenceRun(x0, z0, x1, z1) {
+      var len = Math.hypot(x1 - x0, z1 - z0);
+      var nPosts = Math.max(1, Math.round(len / 3.0));
+      for (var i = 0; i <= nPosts; i++) {
+        var t = i / nPosts;
+        var post = new THREE.Mesh(new THREE.BoxGeometry(0.13, 1.35, 0.13), postMat);
+        post.position.set(x0 + (x1 - x0) * t, 0.675, z0 + (z1 - z0) * t);
+        scene.add(post);
+      }
+      [0.55, 0.85, 1.15, 1.32].forEach(function (h) {
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(x0, h, z0), new THREE.Vector3(x1, h, z1)
+        ]), wl));
+      });
+    }
+    fenceRun(SITE.minX, SITE.minZ, SITE.gateX0, SITE.minZ);
+    fenceRun(SITE.gateX1, SITE.minZ, SITE.maxX, SITE.minZ);
+    fenceRun(SITE.minX, SITE.maxZ, SITE.maxX, SITE.maxZ);
+    fenceRun(SITE.minX, SITE.minZ, SITE.minX, SITE.maxZ);
+    fenceRun(SITE.maxX, SITE.minZ, SITE.maxX, SITE.maxZ);
+    // 門柱
+    [SITE.gateX0, SITE.gateX1].forEach(function (gx) {
+      var gp = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.6, 0.3), postMat);
+      gp.position.set(gx, 0.8, SITE.minZ);
+      scene.add(gp);
+    });
+  })();
+
+  // ---------------------------------------------------------------
+  // 周辺の民家（道路の向かい・敷地外）
+  // ---------------------------------------------------------------
   var houseColliders = [];
   function addHouse(x, z, rotY, w, d, h, cWall, cRoof) {
     var g = new THREE.Group();
@@ -896,34 +1199,43 @@
     var half = Math.max(w, d) / 2 + 0.6;
     houseColliders.push({ minX: x - half, maxX: x + half, minZ: z - half, maxZ: z + half });
   }
-  addHouse(-20, -42, 0.1, 7, 6, 3, 0xd8d3c8, 0x5a5f66);
-  addHouse(2, -44, -0.05, 8, 7, 3, 0xc9b8a4, 0x7a4a3a);
-  addHouse(22, -40, 0.15, 6, 6, 2.8, 0xb9c0c4, 0x3f4a55);
-  addHouse(46, -26, 0.4, 7, 6, 3, 0xe2ddd2, 0x5a5f66);
-  addHouse(50, 8, -0.3, 6, 7, 2.8, 0xd8d3c8, 0x7a4a3a);
-  addHouse(-58, 14, 0, 7, 6, 3, 0xc9b8a4, 0x3f4a55);
-  addHouse(-58, -18, 0.2, 6, 6, 2.8, 0xe2ddd2, 0x5a5f66);
+  // 道路の向かいの一列だけ（コンパクト）
+  addHouse(-24, -27, 0.08, 7, 6, 3, 0xd8d3c8, 0x5a5f66);
+  addHouse(-8, -28, -0.05, 8, 7, 3, 0xc9b8a4, 0x7a4a3a);
+  addHouse(9, -27, 0.12, 6, 6, 2.8, 0xb9c0c4, 0x3f4a55);
+  addHouse(25, -28, 0.3, 7, 6, 3, 0xe2ddd2, 0x5a5f66);
+  addHouse(41, -25, 0.5, 6, 7, 2.8, 0xd8d3c8, 0x7a4a3a);
 
-  // 赤屋根の小屋（東）と白い小屋（西）
-  var redShed = new THREE.Group();
-  var redShedBody = new THREE.Mesh(new THREE.BoxGeometry(4, 2.6, 3), new THREE.MeshStandardMaterial({ color: 0x8a5340, roughness: 0.9 }));
-  redShedBody.position.y = 1.3;
-  redShed.add(redShedBody);
-  var redShedRoof = new THREE.Mesh(new THREE.ConeGeometry(2.9, 1.2, 4), new THREE.MeshStandardMaterial({ color: 0xa5342a, roughness: 0.8, flatShading: true }));
-  redShedRoof.position.y = 3.2;
-  redShedRoof.rotation.y = Math.PI / 4;
-  redShed.add(redShedRoof);
-  redShed.position.set(40, 0, 18);
-  scene.add(redShed);
-  houseColliders.push({ minX: 37.5, maxX: 42.5, minZ: 15.5, maxZ: 20.5 });
-
+  // 白い小屋（敷地内西・写真1左端）
   var whiteShed = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.2, 2.2), new THREE.MeshStandardMaterial({ color: 0xe6e4de, roughness: 0.85 }));
-  whiteShed.position.set(-28, 1.1, 6);
+  whiteShed.position.set(-12.8, 1.1, 2);
   scene.add(whiteShed);
-  houseColliders.push({ minX: -29.9, maxX: -26.1, minZ: 4.3, maxZ: 7.7 });
+  houseColliders.push({ minX: -14.4, maxX: -11.2, minZ: 0.6, maxZ: 3.4 });
+
+  // 敷地北の遺構（崩れたレンガ壁・基礎）
+  (function addRuins() {
+    var ruinMat = new THREE.MeshStandardMaterial({ color: 0x74503c, roughness: 0.95 });
+    [[-6, 50, 5, 1.6], [2, 53, 4, 2.2], [10, 49, 6, 1.2]].forEach(function (rw) {
+      var wall = new THREE.Mesh(new THREE.BoxGeometry(rw[2], rw[3], 0.35), ruinMat);
+      wall.position.set(rw[0], rw[3] / 2, rw[1]);
+      wall.rotation.y = rand(-0.3, 0.3);
+      scene.add(wall);
+    });
+    var slab = new THREE.Mesh(new THREE.BoxGeometry(10, 0.15, 7), concreteMaterial());
+    slab.position.set(2, 0.075, 50);
+    slab.userData.shadow = "receive";
+    scene.add(slab);
+  })();
+
+  // 東側のコンクリ土間（航空写真の右側）
+  var apron = new THREE.Mesh(new THREE.PlaneGeometry(10, 22), concreteMaterial());
+  apron.rotation.x = -Math.PI / 2;
+  apron.position.set(38, 0.02, 17);
+  apron.userData.shadow = "receive";
+  scene.add(apron);
 
   // ---------------------------------------------------------------
-  // 植生（木・茂み・草・岩）
+  // 植生
   // ---------------------------------------------------------------
   var trunkMat = new THREE.MeshStandardMaterial({ color: 0x5b4128, roughness: 0.95 });
   function foliageMat() { return new THREE.MeshStandardMaterial({ color: hsl(rand(95, 130), rand(38, 55), rand(26, 40)), roughness: 0.9, flatShading: true }); }
@@ -933,27 +1245,39 @@
     return (x > -TOTAL_W / 2 - margin && x < TOTAL_W / 2 + margin && z > -margin - 4 && z < BUILD_LEN + margin);
   }
   function blockedForProp(x, z) {
-    if (tooCloseToBuilding(x, z, 4)) return true;
-    if (x > 14 && x < 36 && z > 2 && z < 34) return true;       // 貯水池
-    if (x < -34 && x > -48) return true;                        // 道路
-    if (x > 32 && x < 52 && z > -16 && z < 12) return true;     // 東の土間
+    if (tooCloseToBuilding(x, z, 3.5)) return true;
+    if (x > 11 && x < 31.5 && z > 0 && z < 36.5) return true;   // 貯水池
+    if (z > -23 && z < -11 && x > -50 && x < 50) return true;   // 道路 + 歩道
+    if (x > -0.5 && x < 2.5 && z > -9.5 && z < 0.5) return true; // 通路
+    if (x > 32 && x < 44 && z > 5 && z < 29) return true;       // 東土間
+    if (x > -17 && x < 17 && z > 38 && z < 43) return true;     // 広告プラザ
     for (var i = 0; i < houseColliders.length; i++) {
       var h = houseColliders[i];
       if (x > h.minX - 2 && x < h.maxX + 2 && z > h.minZ - 2 && z < h.maxZ + 2) return true;
     }
     return false;
   }
+  function blockedForGrass(x, z) {
+    if (tooCloseToBuilding(x, z, 0.7)) return true;
+    if (x > 11.5 && x < 31 && z > 0.5 && z < 36) return true;
+    if (z > -23 && z < -11) return true;
+    if (x > -0.6 && x < 2.4 && z > -9.5 && z < 0.5) return true;
+    if (x > 33 && x < 43 && z > 6 && z < 28) return true;
+    if (x > -17 && x < 17 && z > 39 && z < 43) return true;     // 広告プラザ
+    return false;
+  }
 
-  function addTree(x, z) {
+  function addTree(x, z, scale) {
+    scale = scale || 1;
     var g = new THREE.Group();
-    var th = rand(3.0, 5.5);
-    var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.32, th, 7), trunkMat);
+    var th = rand(3.0, 5.0) * scale;
+    var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16 * scale, 0.32 * scale, th, 7), trunkMat);
     trunk.position.y = th / 2;
     g.add(trunk);
-    var n = 3 + Math.floor(Math.random() * 2);
+    var n = 4 + Math.floor(Math.random() * 3);
     for (var k = 0; k < n; k++) {
-      var fol = new THREE.Mesh(new THREE.IcosahedronGeometry(rand(1.2, 2.0), 0), foliageMat());
-      fol.position.set(rand(-1, 1), th + rand(-0.3, 1.2), rand(-1, 1));
+      var fol = new THREE.Mesh(new THREE.IcosahedronGeometry(rand(1.2, 2.1) * scale, 0), foliageMat());
+      fol.position.set(rand(-1.2, 1.2) * scale, th + rand(-0.4, 1.3) * scale, rand(-1.2, 1.2) * scale);
       g.add(fol);
     }
     g.position.set(x, 0, z);
@@ -968,77 +1292,122 @@
     scene.add(bush);
   }
   function addRock(x, z) {
-    var r = rand(0.3, 0.8);
+    var r = rand(0.3, 0.7);
     var rock = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), new THREE.MeshStandardMaterial({ color: hsl(30, 8, rand(40, 60)), roughness: 1, flatShading: true }));
     rock.position.set(x, r * 0.5, z);
     rock.rotation.set(rand(0, 3), rand(0, 3), rand(0, 3));
     scene.add(rock);
   }
-  var grassTex = makeGrassBladeTexture();
-  var grassMat = new THREE.MeshStandardMaterial({ map: grassTex, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 });
+  var grassTexBlade = makeGrassBladeTexture();
+  var grassMat = new THREE.MeshStandardMaterial({ map: grassTexBlade, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 });
   var grassGeo = new THREE.PlaneGeometry(0.7, 0.55);
   function addGrassTuft(x, z) {
     var g = new THREE.Group();
     var p1 = new THREE.Mesh(grassGeo, grassMat);
     var p2 = new THREE.Mesh(grassGeo, grassMat);
     p2.rotation.y = Math.PI / 2;
+    p1.userData.shadow = "receive";
+    p2.userData.shadow = "receive";
     g.add(p1); g.add(p2);
-    var s = rand(0.7, 1.5);
+    var s = rand(0.7, 1.6);
     g.scale.set(s, s, s);
     g.position.set(x, 0.55 * s / 2, z);
+    g.rotation.y = rand(0, Math.PI);
     scene.add(g);
   }
 
-  var placed = 0, guard = 0;
-  while (placed < 18 && guard < 500) {
-    guard++;
-    var tx = rand(-70, 70), tz = rand(-60, 90);
-    if (blockedForProp(tx, tz) || Math.hypot(tx - 8, tz + 26) < 8) continue;
-    addTree(tx, tz); placed++;
-  }
-  // 建屋を挟む大木（航空写真準拠）
-  addTree(-26, 16); addTree(-24, 9); addTree(-13, 38); addTree(12, 38);
-  for (var bi = 0; bi < 36; bi++) {
-    var bx2 = rand(-70, 70), bz2 = rand(-60, 92);
+  // 敷地内西側の大木（航空写真: 建物西に樹木帯）
+  addTree(-12.5, 10, 1.4);
+  addTree(-13, 24, 1.2);
+  addTree(-13.5, 33, 1.1);
+  // 敷地外
+  addTree(-20, 52, 1.2);
+  addTree(28, 50, 1.0);
+  addTree(-22, 6, 1.0);
+  addTree(-34, -26, 0.9);
+  addTree(34, -28, 1.0);
+  addTree(47, -6, 1.1);
+
+  for (var bi = 0; bi < 26; bi++) {
+    var bx2 = rand(-35, 45), bz2 = rand(-30, 58);
     if (!blockedForProp(bx2, bz2)) addBush(bx2, bz2);
   }
-  for (var rk = 0; rk < 20; rk++) {
-    var rx = rand(-70, 70), rz = rand(-55, 90);
+  for (var rk = 0; rk < 10; rk++) {
+    var rx = rand(-20, 32), rz = rand(-8, 44);
     if (!blockedForProp(rx, rz)) addRock(rx, rz);
   }
-  for (var gt = 0; gt < 190; gt++) {
-    var gx = rand(-72, 72), gz = rand(-58, 92);
-    if (!blockedForProp(gx, gz)) addGrassTuft(gx, gz);
+  // 敷地内は草を濃く
+  for (var gt = 0; gt < 320; gt++) {
+    var gx = rand(-14.5, 32), gz = rand(-8.5, 43.5);
+    if (!blockedForGrass(gx, gz)) addGrassTuft(gx, gz);
+  }
+  // 敷地外まばら
+  for (var gt2 = 0; gt2 < 60; gt2++) {
+    var gx2 = rand(-40, 50), gz2 = rand(-10, 58);
+    if (gx2 > -16 && gx2 < 34 && gz2 > -10 && gz2 < 45) continue;
+    if (!blockedForGrass(gx2, gz2)) addGrassTuft(gx2, gz2);
   }
 
   // ---------------------------------------------------------------
-  // 広告: 動画モニター / exemate 静止画 / 説明看板
+  // 広告: 動画3面 + 静止画3面（北側の広告プラザに横並び）
+  //   追加素材は asset/ に以下の名前で置く（無ければ「準備中」表示）:
+  //     動画  : ad-movie-2.mp4 , ad-movie-3.mp4
+  //     静止画: ad-image-2.png , ad-image-3.png
   // ---------------------------------------------------------------
-  var video = document.createElement("video");
-  video.src = encodeURI("asset/福岡県中間市世界遺産　『遠賀川水源地ポンプ室』紹介動画.mp4");
-  video.loop = true;
-  video.muted = true;
-  video.playsInline = true;
-  video.setAttribute("playsinline", "");
-  video.preload = "auto";
-  video.crossOrigin = "anonymous";
-  var videoTex = new THREE.VideoTexture(video);
-  videoTex.minFilter = THREE.LinearFilter;
-  videoTex.magFilter = THREE.LinearFilter;
-  videoTex.encoding = THREE.sRGBEncoding;
-  var videoScreenMat = new THREE.MeshBasicMaterial({ map: videoTex, color: 0xffffff });
-  var videoPending = true;
+  var VIDEO_FILES = [
+    "asset/福岡県中間市世界遺産　『遠賀川水源地ポンプ室』紹介動画.mp4",
+    "asset/ad-movie-2.mp4",
+    "asset/ad-movie-3.mp4"
+  ];
+  var IMAGE_FILES = [
+    "asset/exemate.png",
+    "asset/ad-image-2.png",
+    "asset/ad-image-3.png"
+  ];
+
+  var adVideos = [];
+  var adMuted = true;
+
+  function makeAdPlaceholderTexture(title, sub) {
+    var c = makeCanvas(512, 288);
+    var ctx = c.getContext("2d");
+    var g = ctx.createLinearGradient(0, 0, 0, 288);
+    g.addColorStop(0, "#1c2530"); g.addColorStop(1, "#0f1620");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 512, 288);
+    ctx.strokeStyle = "rgba(200,162,74,0.55)"; ctx.lineWidth = 6; ctx.setLineDash([14, 10]);
+    ctx.strokeRect(16, 16, 480, 256); ctx.setLineDash([]);
+    ctx.fillStyle = "#c8a24a"; ctx.textAlign = "center";
+    ctx.font = "bold 40px 'Hiragino Kaku Gothic ProN',sans-serif";
+    ctx.fillText(title, 256, 130);
+    ctx.fillStyle = "#8fa0ac"; ctx.font = "22px 'Hiragino Kaku Gothic ProN',sans-serif";
+    ctx.fillText(sub, 256, 180);
+    var t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t;
+  }
+
+  function makeVideoScreenMat(src, idx) {
+    var mat = new THREE.MeshBasicMaterial({ map: makeAdPlaceholderTexture("動画広告 " + (idx + 1), "AD MOVIE — 準備中") });
+    var v = document.createElement("video");
+    v.src = encodeURI(src);
+    v.loop = true; v.muted = true; v.playsInline = true;
+    v.setAttribute("playsinline", ""); v.preload = "auto"; v.crossOrigin = "anonymous";
+    var vtex = new THREE.VideoTexture(v);
+    vtex.minFilter = THREE.LinearFilter; vtex.magFilter = THREE.LinearFilter; vtex.encoding = THREE.sRGBEncoding;
+    v.addEventListener("loadeddata", function () { mat.map = vtex; mat.needsUpdate = true; });
+    adVideos.push(v);
+    return mat;
+  }
+  function makeImageScreenMat(src, idx) {
+    var mat = new THREE.MeshBasicMaterial({ map: makeAdPlaceholderTexture("静止画広告 " + (idx + 1), "AD IMAGE — 準備中") });
+    new THREE.TextureLoader().load(src, function (t) {
+      t.encoding = THREE.sRGBEncoding; mat.map = t; mat.needsUpdate = true;
+    }, undefined, function () { /* 失敗時はプレースホルダのまま */ });
+    return mat;
+  }
+
   function tryPlayVideo() {
-    if (!videoPending) return;
-    var pr = video.play();
-    if (pr && pr.then) pr.then(function () { videoPending = false; }).catch(function () { });
+    adVideos.forEach(function (v) { var p = v.play(); if (p && p.catch) p.catch(function () { }); });
   }
-
-  var imgMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
-  new THREE.TextureLoader().load("asset/exemate.png", function (t) {
-    t.encoding = THREE.sRGBEncoding;
-    imgMat.map = t; imgMat.color.set(0xffffff); imgMat.needsUpdate = true;
-  });
+  function setAdMuted(m) { adVideos.forEach(function (v) { v.muted = m; }); }
 
   function addMonitor(x, z, rotY, w, h, screenMat, label) {
     var group = new THREE.Group();
@@ -1049,7 +1418,9 @@
     var frame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.5, h + 0.5, 0.3), new THREE.MeshStandardMaterial({ color: 0x17181c, roughness: 0.5, metalness: 0.4 }));
     frame.position.set(0, 2.2 + h / 2, 0); group.add(frame);
     var screen = new THREE.Mesh(new THREE.PlaneGeometry(w, h), screenMat);
-    screen.position.set(0, 2.2 + h / 2, 0.17); group.add(screen);
+    screen.position.set(0, 2.2 + h / 2, 0.17);
+    screen.userData.shadow = "none";
+    group.add(screen);
     if (label) {
       var lc = makeCanvas(512, 96); var lx = lc.getContext("2d");
       lx.fillStyle = "#c8a24a"; lx.fillRect(0, 0, 512, 96);
@@ -1057,7 +1428,9 @@
       lx.textAlign = "center"; lx.textBaseline = "middle"; lx.fillText(label, 256, 50);
       var lt = new THREE.CanvasTexture(lc); lt.encoding = THREE.sRGBEncoding;
       var band = new THREE.Mesh(new THREE.PlaneGeometry(w + 0.5, 0.7), new THREE.MeshBasicMaterial({ map: lt }));
-      band.position.set(0, 2.2 + h + 0.55, 0.17); group.add(band);
+      band.position.set(0, 2.2 + h + 0.55, 0.17);
+      band.userData.shadow = "none";
+      group.add(band);
     }
     group.position.set(x, 0, z);
     group.rotation.y = rotY;
@@ -1100,16 +1473,35 @@
     scene.add(group);
   }
 
-  addMonitor(-20, -14, Math.PI * 0.16, 8, 4.5, videoScreenMat, "遠賀川水源地ポンプ室 紹介動画");
-  addMonitor(22, -12, -Math.PI * 0.2, 6, 4, imgMat, "SPONSOR / exemate");
-  addSignboard(-28, 14, Math.PI * 0.3, ["SUPPORT", "寄付者名をレンガに刻印", "レンガをクリックで情報表示", "近づいて確かめてください"], "#1e8449");
-  addSignboard(-10, 52, Math.PI * 0.85, ["SPONSOR", "広告募集中", "企業広告・PR動画を掲載", "AD SPACE"], "#c0392b");
-  addSignboard(0, 72, Math.PI, ["PROJECT", "遠賀川水源地ポンプ室", "メタバース保存プロジェクト", "プロトタイプ v0.3"], "#6c3483");
+  // 北側の広告プラザ: 動画3面 + 静止画3面を横並び（南向き）
+  var AD_Z = 41, AD_ROTY = Math.PI, AD_W = 4.6, AD_H = 2.6, AD_GAP = 5.5, AD_X0 = -13.75;
+  for (var av = 0; av < 3; av++) {
+    addMonitor(AD_X0 + av * AD_GAP, AD_Z, AD_ROTY, AD_W, AD_H, makeVideoScreenMat(VIDEO_FILES[av], av), "動画広告 " + (av + 1));
+  }
+  for (var ai = 0; ai < 3; ai++) {
+    addMonitor(AD_X0 + (ai + 3) * AD_GAP, AD_Z, AD_ROTY, AD_W, AD_H, makeImageScreenMat(IMAGE_FILES[ai], ai), "静止画広告 " + (ai + 1));
+  }
+  // 紹介動画を正面のエントランス脇にも大きく1面
+  addMonitor(-12, -2, Math.PI * 0.42, 7, 4, makeVideoScreenMat(VIDEO_FILES[0], 0), "遠賀川水源地ポンプ室 紹介動画");
+
+  addSignboard(6.5, -10.6, Math.PI, ["PROJECT", "遠賀川水源地ポンプ室", "メタバース保存プロジェクト", "プロトタイプ v0.4"], "#6c3483");
+  addSignboard(-6, 39, 0, ["SPONSOR", "広告プラザ", "動画3面・静止画3面", "AD SPACE"], "#c0392b");
 
   // ---------------------------------------------------------------
-  // 操作系（移動・ジャンプ・コリジョン）
+  // 影の一括設定
   // ---------------------------------------------------------------
-  camera.position.set(8, 1.7, -26);
+  scene.traverse(function (o) {
+    if (!o.isMesh) return;
+    var m = o.userData.shadow;
+    if (m === "none") { o.castShadow = false; o.receiveShadow = false; }
+    else if (m === "receive") { o.castShadow = false; o.receiveShadow = true; }
+    else { o.castShadow = true; o.receiveShadow = true; }
+  });
+
+  // ---------------------------------------------------------------
+  // 操作系
+  // ---------------------------------------------------------------
+  camera.position.set(1.5, 1.7, -8.5);
   camera.rotation.y = Math.PI;
 
   var controls = new THREE.PointerLockControls(camera, document.body);
@@ -1120,16 +1512,19 @@
   var titleBadge = document.getElementById("title-badge");
   var aimHint = document.getElementById("aim-hint");
   var brickDialog = document.getElementById("brick-dialog");
+  var guide = document.getElementById("controls-guide");
 
   overlay.addEventListener("click", function () { controls.lock(); tryPlayVideo(); });
   controls.addEventListener("lock", function () {
     overlay.style.display = "none"; crosshair.style.display = "block";
     hud.style.display = "block"; titleBadge.style.display = "block";
+    guide.style.display = "block";
     tryPlayVideo();
   });
   controls.addEventListener("unlock", function () {
     overlay.style.display = "flex"; crosshair.style.display = "none";
     hud.style.display = "none"; titleBadge.style.display = "none";
+    guide.style.display = "none";
     aimHint.style.display = "none";
     closeBrickDialog();
   });
@@ -1138,7 +1533,7 @@
   window.addEventListener("keydown", function (e) {
     keys[e.code] = true;
     if (e.code === "Space") e.preventDefault();
-    if (e.code === "KeyM") { video.muted = !video.muted; tryPlayVideo(); }
+    if (e.code === "KeyM") { adMuted = !adMuted; setAdMuted(adMuted); tryPlayVideo(); }
     if (e.code === "KeyQ") closeBrickDialog();
   });
   window.addEventListener("keyup", function (e) { keys[e.code] = false; });
@@ -1149,9 +1544,17 @@
 
   var colliders = [
     { minX: -TOTAL_W / 2 - 0.6, maxX: TOTAL_W / 2 + 0.6, minZ: -0.6, maxZ: BUILD_LEN + 0.6 },
-    { minX: 2.4, maxX: 10.0, minZ: -3.8, maxZ: 0.6 },   // 附属屋
-    { minX: 15.0, maxX: 35.2, minZ: 3.0, maxZ: 33.2 },  // 貯水池+フェンス
-    { minX: 22.0, maxX: 26.0, minZ: 35.5, maxZ: 39.5 }  // 水タンク
+    { minX: 2.4, maxX: 10.0, minZ: -3.8, maxZ: 0.6 },      // 附属屋
+    { minX: 11.4, maxX: 31.1, minZ: -0.1, maxZ: 36.1 },    // 貯水池+フェンス
+    { minX: 18.2, maxX: 21.8, minZ: 37.7, maxZ: 41.3 },    // 水タンク
+    { minX: -16.5, maxX: 16.5, minZ: 40.4, maxZ: 41.7 },   // 北の広告プラザ
+    { minX: -14, maxX: -10, minZ: -3.2, maxZ: -0.8 },      // エントランス脇の動画モニター
+    // 敷地フェンス（門 x -1..4 は通行可）
+    { minX: SITE.minX - 0.2, maxX: SITE.gateX0, minZ: SITE.minZ - 0.25, maxZ: SITE.minZ + 0.25 },
+    { minX: SITE.gateX1, maxX: SITE.maxX + 0.2, minZ: SITE.minZ - 0.25, maxZ: SITE.minZ + 0.25 },
+    { minX: SITE.minX - 0.2, maxX: SITE.maxX + 0.2, minZ: SITE.maxZ - 0.25, maxZ: SITE.maxZ + 0.25 },
+    { minX: SITE.minX - 0.25, maxX: SITE.minX + 0.25, minZ: SITE.minZ, maxZ: SITE.maxZ },
+    { minX: SITE.maxX - 0.25, maxX: SITE.maxX + 0.25, minZ: SITE.minZ, maxZ: SITE.maxZ }
   ];
   Array.prototype.push.apply(colliders, houseColliders);
   function collides(x, z) {
@@ -1188,8 +1591,8 @@
       var candX = obj.position.x + dx, candZ = obj.position.z + dz;
       if (!collides(candX, obj.position.z)) obj.position.x = candX;
       if (!collides(obj.position.x, candZ)) obj.position.z = candZ;
-      obj.position.x = clamp(obj.position.x, -150, 150);
-      obj.position.z = clamp(obj.position.z, -150, 150);
+      obj.position.x = clamp(obj.position.x, -80, 80);
+      obj.position.z = clamp(obj.position.z, -80, 80);
     }
 
     if (keys["Space"] && onGround) { velY = JUMP_V; onGround = false; }
@@ -1200,7 +1603,7 @@
   }
 
   // ---------------------------------------------------------------
-  // レンガ選択（レイキャスト + ハイライト + ダイアログ）
+  // レンガ選択
   // ---------------------------------------------------------------
   var raycaster = new THREE.Raycaster();
   var centerNDC = new THREE.Vector2(0, 0);
@@ -1210,6 +1613,7 @@
   );
   highlight.visible = false;
   highlight.renderOrder = 5;
+  highlight.userData.shadow = "none";
   scene.add(highlight);
 
   var aimBrick = null;
@@ -1311,8 +1715,7 @@
       badge.className = "bd-badge empty";
       badge.textContent = "空きレンガ";
       name.textContent = "未登録";
-      rows.innerHTML = rowHTML("刻印番号", ab.label) +
-        rowHTML("状態", "刻印の受付が可能です");
+      rows.innerHTML = rowHTML("刻印番号", ab.label) + rowHTML("状態", "刻印の受付が可能です");
       msg.textContent = "寄付をすると、このレンガにお名前とメッセージを刻印できます。";
     } else if (donor.type === "personal") {
       badge.className = "bd-badge personal";

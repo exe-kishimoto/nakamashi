@@ -46,6 +46,26 @@
     padding:6px 10px; border-radius:6px; pointer-events:none; text-align:right;
   }
 
+  /* 右下の操作ガイド */
+  #controls-guide {
+    position:fixed; right:14px; bottom:14px; z-index:10; display:none;
+    background:rgba(10,14,18,0.55); border:1px solid rgba(200,162,74,0.35);
+    border-radius:8px; padding:11px 13px; pointer-events:none;
+    color:#dfe6ea; font-size:12px; line-height:1.75; min-width:186px;
+  }
+  #controls-guide .cg-title {
+    font-size:11px; color:#c8a24a; letter-spacing:0.06em; margin-bottom:6px;
+    border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;
+  }
+  #controls-guide .cg-row { display:flex; align-items:center; gap:8px; }
+  #controls-guide .cg-row + .cg-row { margin-top:3px; }
+  #controls-guide .key {
+    display:inline-block; min-width:20px; text-align:center;
+    background:#26303a; color:#f2e6c9; border:1px solid rgba(255,255,255,0.14);
+    border-radius:4px; padding:1px 6px; font-size:11px; font-weight:bold;
+  }
+  #controls-guide .desc { color:#c3ccd2; }
+
   /* レンガ刻印ダイアログ */
   #brick-dialog {
     position:fixed; right:22px; top:50%; transform:translateY(-50%);
@@ -73,7 +93,7 @@
 <div id="overlay">
   <div class="panel">
     <h1>遠賀川水源地ポンプ室 メタバース保存プロジェクト</h1>
-    <h2>プロトタイプ v0.3 — 実物写真をもとに再現度を強化</h2>
+    <h2>プロトタイプ v0.4 — 実物準拠の配置・グラフィック強化</h2>
     <div class="start">クリックしてスタート</div>
     <div class="keys">
       <b>W A S D</b>：移動　<b>Shift</b>：走る　<b>Space</b>：ジャンプ　マウス：視点<br>
@@ -85,8 +105,18 @@
 
 <div id="crosshair"></div>
 <div id="aim-hint"></div>
-<div id="hud">レンガに照準を合わせて<b>左クリック</b>で刻印情報を表示。<b>ホイール</b>でズーム。<br><b>Space</b>ジャンプ / <b>M</b>で紹介動画の音声 ON/OFF</div>
+<div id="hud">レンガに照準を合わせて<b>左クリック</b>で刻印情報を表示。<b>ホイール</b>でズーム。</div>
 <div id="title-badge">遠賀川水源地ポンプ室<br>メタバース保存プロジェクト（試作）</div>
+
+<div id="controls-guide">
+  <div class="cg-title">操作ガイド</div>
+  <div class="cg-row"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span><span class="desc">移動</span></div>
+  <div class="cg-row"><span class="key">マウス</span><span class="desc">カメラ（視点）</span></div>
+  <div class="cg-row"><span class="key">Shift</span><span class="desc">走る</span><span class="key">Space</span><span class="desc">ジャンプ</span></div>
+  <div class="cg-row"><span class="key">ホイール</span><span class="desc">ズーム</span></div>
+  <div class="cg-row"><span class="key">左クリック</span><span class="desc">レンガを調べる</span></div>
+  <div class="cg-row"><span class="key">M</span><span class="desc">動画の音</span><span class="key">ESC</span><span class="desc">解除</span></div>
+</div>
 
 <div id="brick-dialog">
   <canvas id="brick-zoom" width="320" height="150"></canvas>
