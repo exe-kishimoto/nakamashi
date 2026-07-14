@@ -810,12 +810,11 @@
   scene.add(buildingGroup);
 
   function makeLongWallWindows() {
-    var arr = [], n = 9;
+    // 実物の長辺: 背の高い大アーチ窓が近接して並ぶ
+    var arr = [], n = 10;
     for (var i = 0; i < n; i++) {
-      var cx = 0.07 + (i / (n - 1)) * 0.86;
-      arr.push({ cxFrac: cx, topFrac: 0.32, wFrac: 0.055, hFrac: 0.5, style: "arch" });
-      arr.push({ cxFrac: cx - 0.017, topFrac: 0.08, wFrac: 0.014, hFrac: 0.13, style: "smallarch" });
-      arr.push({ cxFrac: cx + 0.017, topFrac: 0.08, wFrac: 0.014, hFrac: 0.13, style: "smallarch" });
+      var cx = 0.06 + (i / (n - 1)) * 0.88;
+      arr.push({ cxFrac: cx, topFrac: 0.17, wFrac: 0.07, hFrac: 0.66, style: "arch" });
     }
     return arr;
   }
@@ -1099,8 +1098,8 @@
   addTowerLattice(10.1, 23);
 
   // 東壁沿いの白い制御盤ボックス
-  var ctrlBox = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.0, 1.1), new THREE.MeshStandardMaterial({ color: 0xdcd9d2, roughness: 0.7 }));
-  ctrlBox.position.set(10.2, 1.0, 17);
+  var ctrlBox = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.9, 1.0), new THREE.MeshStandardMaterial({ color: 0x8f9498, roughness: 0.6, metalness: 0.3 }));
+  ctrlBox.position.set(10.2, 0.95, 17);
   scene.add(ctrlBox);
 
   // 配管（東壁から貯水池へ下る）+ バルブ
@@ -1244,11 +1243,6 @@
   addHouse(26, -49, 0.3, 7, 6, 3, 0xe2ddd2, 0x5a5f66);
   addHouse(44, -45, 0.5, 6, 7, 2.8, 0xd8d3c8, 0x7a4a3a);
 
-  // 白い小屋（敷地内西・写真1左端）
-  var whiteShed = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.2, 2.2), new THREE.MeshStandardMaterial({ color: 0xe6e4de, roughness: 0.85 }));
-  whiteShed.position.set(-12.8, 1.1, 2);
-  scene.add(whiteShed);
-  houseColliders.push({ minX: -14.4, maxX: -11.2, minZ: 0.6, maxZ: 3.4 });
 
   // 敷地北の遺構（崩れたレンガ壁・基礎）
   (function addRuins() {
@@ -1529,7 +1523,7 @@
     addMonitor(AD_RX, AD_ZS[ai], -Math.PI / 2, AD_W, AD_H, makeImageScreenMat(IMAGE_FILES[ai], ai), "静止画広告 " + (ai + 1));
   }
 
-  addSignboard(20, -24, -Math.PI / 2, ["PROJECT", "遠賀川水源地ポンプ室", "メタバース保存プロジェクト", "プロトタイプ v0.6"], "#6c3483");
+  addSignboard(20, -24, -Math.PI / 2, ["PROJECT", "遠賀川水源地ポンプ室", "メタバース保存プロジェクト", "プロトタイプ v0.7"], "#6c3483");
 
   // ---------------------------------------------------------------
   // 影の一括設定
