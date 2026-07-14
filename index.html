@@ -8,40 +8,64 @@
   html, body { margin:0; padding:0; overflow:hidden; background:#0b0e12; height:100%; }
   * { box-sizing:border-box; }
   canvas { display:block; }
-  #app-font-check { font-family: "Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif; }
+  body { font-family: "Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif; }
 
   #overlay {
     position:fixed; inset:0; z-index:20;
     display:flex; align-items:center; justify-content:center;
     background: radial-gradient(circle at 50% 40%, rgba(30,36,44,0.92), rgba(8,10,13,0.97));
-    font-family: "Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
     color:#eee; cursor:pointer; text-align:center;
   }
-  #overlay .panel { max-width:560px; padding:32px; }
+  #overlay .panel { max-width:620px; padding:32px; }
   #overlay h1 { font-size:20px; margin:0 0 6px; letter-spacing:0.02em; color:#f2e6c9; }
   #overlay h2 { font-size:13px; font-weight:normal; margin:0 0 24px; color:#9fb0bd; }
   #overlay .start { font-size:17px; padding:12px 28px; border:1px solid #cbb87a; border-radius:4px; display:inline-block; margin-bottom:22px; }
-  #overlay .keys { font-size:12.5px; color:#aab6bf; line-height:1.9; }
+  #overlay .keys { font-size:12.5px; color:#aab6bf; line-height:2.0; }
   #overlay .keys b { color:#e7dcbb; }
 
   #crosshair {
     position:fixed; top:50%; left:50%; width:6px; height:6px; margin:-3px 0 0 -3px;
-    border-radius:50%; background:rgba(255,255,255,0.7); box-shadow:0 0 2px rgba(0,0,0,0.6);
+    border-radius:50%; background:rgba(255,255,255,0.75); box-shadow:0 0 2px rgba(0,0,0,0.6);
     z-index:10; display:none; pointer-events:none;
+  }
+  #aim-hint {
+    position:fixed; top:54%; left:50%; transform:translateX(-50%);
+    z-index:10; display:none; pointer-events:none;
+    font-size:12px; color:#ffe9a8; background:rgba(10,14,18,0.55);
+    padding:4px 12px; border-radius:14px;
   }
   #hud {
     position:fixed; left:14px; bottom:12px; z-index:10; display:none;
-    font-family: "Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
     font-size:12px; color:#dfe6ea; background:rgba(10,14,18,0.45);
     padding:8px 12px; border-radius:6px; line-height:1.7; pointer-events:none;
   }
   #hud b { color:#f2e6c9; }
   #title-badge {
     position:fixed; right:14px; top:12px; z-index:10; display:none;
-    font-family: "Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
     font-size:12px; color:#dfe6ea; background:rgba(10,14,18,0.45);
     padding:6px 10px; border-radius:6px; pointer-events:none; text-align:right;
   }
+
+  /* レンガ刻印ダイアログ */
+  #brick-dialog {
+    position:fixed; right:22px; top:50%; transform:translateY(-50%);
+    width:340px; z-index:15; display:none;
+    background:rgba(12,15,19,0.93);
+    border:1px solid #c8a24a; border-radius:10px;
+    padding:16px; color:#eee;
+    box-shadow:0 8px 40px rgba(0,0,0,0.5);
+  }
+  #brick-zoom { width:100%; border-radius:6px; display:block; margin-bottom:10px; border:1px solid rgba(255,255,255,0.12); }
+  .bd-badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; margin-bottom:8px; }
+  .bd-badge.personal { background:#6b5518; color:#ffe9a8; }
+  .bd-badge.company  { background:#1d4568; color:#bcdcff; }
+  .bd-badge.empty    { background:#444; color:#ccc; }
+  #bd-name { margin:2px 0 10px; font-size:18px; color:#f5edd8; }
+  .bd-row { display:flex; font-size:12.5px; line-height:1.95; border-bottom:1px dashed rgba(255,255,255,0.08); }
+  .bd-row .k { width:92px; color:#9fb0bd; flex:none; }
+  .bd-row .v { color:#e8e2d2; word-break:break-all; }
+  #bd-message { margin-top:10px; font-size:13px; color:#d8cfa8; font-style:italic; line-height:1.6; }
+  .bd-footer { margin-top:12px; font-size:11px; color:#8b97a0; }
 </style>
 </head>
 <body>
@@ -49,19 +73,29 @@
 <div id="overlay">
   <div class="panel">
     <h1>遠賀川水源地ポンプ室 メタバース保存プロジェクト</h1>
-    <h2>プロトタイプ v0.1 — 建屋と周辺フィールドを試作中</h2>
+    <h2>プロトタイプ v0.3 — 実物写真をもとに再現度を強化</h2>
     <div class="start">クリックしてスタート</div>
     <div class="keys">
-      <b>W A S D</b> / 矢印キー：移動　　<b>Shift</b>：走る　　<b>Space</b>：ジャンプ<br>
-      マウス移動：視点操作　　<b>ホイール</b>：ズーム（レンガの刻印を確認）<br>
-      <b>M</b>：紹介動画の音声 ON/OFF　　<b>ESC</b>：視点操作の解除
+      <b>W A S D</b>：移動　<b>Shift</b>：走る　<b>Space</b>：ジャンプ　マウス：視点<br>
+      <b>ホイール</b>：ズーム　<b>左クリック</b>：照準のレンガを選択（刻印情報を表示）<br>
+      <b>Q</b>：ダイアログを閉じる　<b>M</b>:動画音声 ON/OFF　<b>ESC</b>：カーソル表示
     </div>
   </div>
 </div>
 
 <div id="crosshair"></div>
-<div id="hud">レンガに近づき<b>ホイールでズーム</b>すると刻印が読めます。<br><b>Space</b>でジャンプ。正面の大型モニターで<b>紹介動画</b>が流れます（<b>M</b>で音声）。</div>
+<div id="aim-hint"></div>
+<div id="hud">レンガに照準を合わせて<b>左クリック</b>で刻印情報を表示。<b>ホイール</b>でズーム。<br><b>Space</b>ジャンプ / <b>M</b>で紹介動画の音声 ON/OFF</div>
 <div id="title-badge">遠賀川水源地ポンプ室<br>メタバース保存プロジェクト（試作）</div>
+
+<div id="brick-dialog">
+  <canvas id="brick-zoom" width="320" height="150"></canvas>
+  <div id="bd-badge" class="bd-badge empty">空きレンガ</div>
+  <h3 id="bd-name">未登録</h3>
+  <div id="bd-rows"></div>
+  <div id="bd-message"></div>
+  <div class="bd-footer">クリック：別のレンガを選択　/　Q：閉じる</div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
