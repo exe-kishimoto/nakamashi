@@ -834,7 +834,7 @@
       { cxFrac: 0.24, topFrac: 0.54, wFrac: 0.05, hFrac: 0.28, style: "smallarch" },
       { cxFrac: 0.31, topFrac: 0.54, wFrac: 0.05, hFrac: 0.28, style: "smallarch" }
     ],
-    door: { cxFrac: 0.5, wFrac: 0.14, hFrac: 0.62 },
+    door: { cxFrac: 0.5, wFrac: 0.075, hFrac: 0.42 },
     nameProb: 0.05, ivyDensity: 10, plaster: 0.96,
     featured: [{ y_m: 1.5, xFrac: 0.66, donor: FEATURED_EXEMATE }]
   });
@@ -904,6 +904,14 @@
   addGableTri(SHED_HW * 2, SHED_HW, 0, gableFR);
   addGableTri(-SHED_HW * 2, -SHED_HW, BUILD_LEN, gableBL);
   addGableTri(SHED_HW * 2, SHED_HW, BUILD_LEN, gableBR);
+
+  // 妻壁の谷部と壁上端(WALL_H)の間にできる三角の隙間を塞ぐ（前後）
+  var gableFillMat = new THREE.MeshStandardMaterial({ color: 0xbdb29b, roughness: 0.95, side: THREE.DoubleSide });
+  [0, BUILD_LEN].forEach(function (z) {
+    buildingGroup.add(makeTriMesh(
+      [-SHED_HW * 2, WALL_H, z], [SHED_HW * 2, WALL_H, z], [0, VALLEY_H, z],
+      gableFillMat, [0, 0], [1, 0], [0.5, 1]));
+  });
 
   var pilasterMat = new THREE.MeshStandardMaterial({ color: 0x7a6350, roughness: 0.9 });
   var capMat = new THREE.MeshStandardMaterial({ color: 0xcfc2a8, roughness: 0.85 });
@@ -981,29 +989,6 @@
   var fireBox = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 0.35), new THREE.MeshStandardMaterial({ color: 0xb03024, roughness: 0.6 }));
   fireBox.position.set(2.6, 0.4, -0.7);
   buildingGroup.add(fireBox);
-
-  // 正面（画面右＝-x側）の赤レンガ附属屋。赤い扉2枚
-  var annexTex = makeBrickWallTexture({
-    realW: 6.4, realH: 2.6, windows: [],
-    nameProb: 0, ivyDensity: 7, plaster: 0.08
-  });
-  var annexSideMat = new THREE.MeshStandardMaterial({ color: 0x8a4a38, roughness: 0.95 });
-  var annex = new THREE.Mesh(new THREE.BoxGeometry(6.4, 2.6, 3.2), [
-    annexSideMat, annexSideMat, flatBrick, flatBrick, annexSideMat,
-    new THREE.MeshStandardMaterial({ map: annexTex.map, bumpMap: annexTex.bump, bumpScale: 0.25, roughness: 0.95 })
-  ]);
-  annex.position.set(-6.2, 1.3, -1.6);
-  buildingGroup.add(annex);
-  var annexRoof = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.12, 3.6), new THREE.MeshStandardMaterial({ color: 0x6d7378, roughness: 0.6, metalness: 0.2 }));
-  annexRoof.position.set(-6.2, 2.66, -1.6);
-  buildingGroup.add(annexRoof);
-  // 赤い扉2枚（写真右下）
-  var redDoorMat = new THREE.MeshStandardMaterial({ color: 0x9c3b2c, roughness: 0.7, metalness: 0.15 });
-  [-7.4, -6.0].forEach(function (dx) {
-    var rd = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.9, 0.08), redDoorMat);
-    rd.position.set(dx, 0.98, -3.22);
-    buildingGroup.add(rd);
-  });
 
   // 建物足元の接地影（AOストリップ）
   var aoCanvas = makeCanvas(32, 32);
@@ -1550,7 +1535,7 @@
     addMonitor(AD_RX, AD_ZS[ai], -Math.PI / 2, AD_W, AD_H, makeImageScreenMat(IMAGE_FILES[ai], ai), "静止画広告 " + (ai + 1));
   }
 
-  addSignboard(20, -24, -Math.PI / 2, ["PROJECT", "遠賀川水源地ポンプ室", "メタバース保存プロジェクト", "プロトタイプ v0.7"], "#6c3483");
+  addSignboard(20, -24, -Math.PI / 2, ["PROJECT", "遠賀川水源地ポンプ室", "メタバース保存プロジェクト", "プロトタイプ v0.9"], "#6c3483");
 
   // ---------------------------------------------------------------
   // 影の一括設定
@@ -1615,7 +1600,6 @@
 
   var colliders = [
     { minX: -TOTAL_W / 2 - 0.6, maxX: TOTAL_W / 2 + 0.6, minZ: -0.6, maxZ: BUILD_LEN + 0.6 },
-    { minX: -10.0, maxX: -2.4, minZ: -3.8, maxZ: 0.6 },    // 附属屋（画面右=-x）
     { minX: 11.4, maxX: 31.1, minZ: -0.1, maxZ: 36.1 },    // 貯水池+フェンス
     { minX: 18.2, maxX: 21.8, minZ: 37.7, maxZ: 41.3 },    // 水タンク
     { minX: -12.4, maxX: -11.6, minZ: -24, maxZ: -4 },     // 前庭 左（動画）広告列
