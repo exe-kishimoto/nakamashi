@@ -1504,8 +1504,9 @@
     var group = new THREE.Group();
     var postMat = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.9 });
     var postGeo = new THREE.CylinderGeometry(0.09, 0.09, 2.8, 8);
-    var p1 = new THREE.Mesh(postGeo, postMat); p1.position.set(-1.1, 1.4, 0); group.add(p1);
-    var p2 = new THREE.Mesh(postGeo, postMat); p2.position.set(1.1, 1.4, 0); group.add(p2);
+    // 支柱は板の裏側(-z)へ寄せて前面へのめり込みを防ぐ
+    var p1 = new THREE.Mesh(postGeo, postMat); p1.position.set(-1.1, 1.4, -0.22); group.add(p1);
+    var p2 = new THREE.Mesh(postGeo, postMat); p2.position.set(1.1, 1.4, -0.22); group.add(p2);
     var board = new THREE.Mesh(new THREE.BoxGeometry(2.8, 1.85, 0.08), [
       new THREE.MeshStandardMaterial({ color: 0x2a2a2a }), new THREE.MeshStandardMaterial({ color: 0x2a2a2a }),
       new THREE.MeshStandardMaterial({ color: 0x2a2a2a }), new THREE.MeshStandardMaterial({ color: 0x2a2a2a }),
@@ -1531,7 +1532,7 @@
     addMonitor(9.5, AD_ZS[ai], -Math.PI / 2, AD_W, AD_H, makeImageScreenMat(IMAGE_FILES[ai], ai), "静止画広告 " + (ai + 1));
   }
 
-  addSignboard(6.5, -15.4, Math.PI, ["PROJECT", "遠賀川水源地ポンプ室", "メタバース保存プロジェクト", "プロトタイプ v0.5"], "#6c3483");
+  addSignboard(13, -13, -Math.PI / 2, ["PROJECT", "遠賀川水源地ポンプ室", "メタバース保存プロジェクト", "プロトタイプ v0.5"], "#6c3483");
 
   // ---------------------------------------------------------------
   // 影の一括設定
@@ -1559,12 +1560,16 @@
   var aimHint = document.getElementById("aim-hint");
   var brickDialog = document.getElementById("brick-dialog");
   var guide = document.getElementById("controls-guide");
+  var flyBadge = document.getElementById("fly-badge");
+
+  function updateFlyBadge() { flyBadge.style.display = (flyMode && controls.isLocked) ? "block" : "none"; }
 
   overlay.addEventListener("click", function () { controls.lock(); tryPlayVideo(); });
   controls.addEventListener("lock", function () {
     overlay.style.display = "none"; crosshair.style.display = "block";
     hud.style.display = "block"; titleBadge.style.display = "block";
     guide.style.display = "block";
+    updateFlyBadge();
     tryPlayVideo();
   });
   controls.addEventListener("unlock", function () {
@@ -1572,6 +1577,7 @@
     hud.style.display = "none"; titleBadge.style.display = "none";
     guide.style.display = "none";
     aimHint.style.display = "none";
+    flyBadge.style.display = "none";
     closeBrickDialog();
   });
 
@@ -1581,6 +1587,7 @@
     if (e.code === "Space") e.preventDefault();
     if (e.code === "KeyM") { adMuted = !adMuted; setAdMuted(adMuted); tryPlayVideo(); }
     if (e.code === "KeyQ") closeBrickDialog();
+    if (e.code === "KeyF" && !e.repeat) { flyMode = !flyMode; velY = 0; updateFlyBadge(); }
   });
   window.addEventListener("keyup", function (e) { keys[e.code] = false; });
   window.addEventListener("wheel", function (e) {
@@ -1612,7 +1619,7 @@
   }
 
   var EYE = 1.7, GRAVITY = -26, JUMP_V = 8.6;
-  var velY = 0, onGround = true, bobT = 0;
+  var velY = 0, onGround = true, bobT = 0, flyMode = false;
   var forwardV = new THREE.Vector3(), rightV = new THREE.Vector3();
   var clock = new THREE.Clock();
 
@@ -1623,8 +1630,31 @@
     if (keys["KeyS"] || keys["ArrowDown"]) moveZ -= 1;
     if (keys["KeyD"] || keys["ArrowRight"]) moveX += 1;
     if (keys["KeyA"] || keys["ArrowLeft"]) moveX -= 1;
-
     var moving = (moveX !== 0 || moveZ !== 0);
+
+    if (flyMode) {
+      // 浮遊モード: 重力なし・XZは視線方向、上下は Space / Shift。コライダー無視で自由に。
+      var fspeed = (keys["ControlLeft"] || keys["KeyC"]) ? 22 : 11;
+      if (moving) {
+        var flen = Math.hypot(moveX, moveZ);
+        moveX /= flen; moveZ /= flen;
+        camera.getWorldDirection(forwardV);
+        forwardV.y = 0; forwardV.normalize();
+        rightV.set(-forwardV.z, 0, forwardV.x);
+        obj.position.x += (forwardV.x * moveZ + rightV.x * moveX) * fspeed * dt;
+        obj.position.z += (forwardV.z * moveZ + rightV.z * moveX) * fspeed * dt;
+      }
+      var up = 0;
+      if (keys["Space"]) up += 1;
+      if (keys["ShiftLeft"] || keys["ShiftRight"]) up -= 1;
+      obj.position.y += up * fspeed * dt;
+      obj.position.x = clamp(obj.position.x, -80, 80);
+      obj.position.z = clamp(obj.position.z, -80, 80);
+      obj.position.y = clamp(obj.position.y, 0.6, 70);
+      velY = 0; onGround = false;
+      return;
+    }
+
     var speed = (keys["ShiftLeft"] || keys["ShiftRight"]) ? 11 : 5.8;
     if (moving) {
       var len = Math.hypot(moveX, moveZ);
