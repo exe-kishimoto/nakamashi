@@ -1420,7 +1420,7 @@
   //     静止画: ad-image-2.png , ad-image-3.png
   // ---------------------------------------------------------------
   var VIDEO_FILES = [
-    "asset/福岡県中間市世界遺産　『遠賀川水源地ポンプ室』紹介動画.mp4",
+    "asset/ad-movie-1.mp4",
     "asset/ad-movie-2.mp4",
     "asset/ad-movie-3.mp4"
   ];

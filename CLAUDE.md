@@ -38,7 +38,7 @@ start.bat をダブルクリック
 | `index.html` | エントリ。UI（開始オーバーレイ / HUD / レンガ刻印ダイアログ）と Three.js の CDN 読み込み |
 | `app.js` | 本体。シーン構築・建物・周辺環境・操作系・レンガ選択システムすべて |
 | `start.bat` | ローカルサーバー起動用（ASCIIのみ） |
-| `asset/福岡県中間市世界遺産　『遠賀川水源地ポンプ室』紹介動画.mp4` | 紹介動画（動画広告1・紹介動画モニター） |
+| `asset/ad-movie-1.mp4` | 紹介動画（動画広告1）。※旧・日本語名からASCII名へリネーム |
 | `asset/exemate.png` | スポンサー静止画（静止画広告1） |
 | `asset/ad-movie-2.mp4`, `ad-movie-3.mp4` | 追加の動画広告（無ければ「準備中」表示） |
 | `asset/ad-image-2.png`, `ad-image-3.png` | 追加の静止画広告（無ければ「準備中」表示） |
