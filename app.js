@@ -1456,6 +1456,35 @@
     }
   })();
 
+  // ---------------------------------------------------------------
+  // 【お試し】ポンプ室の3Dモデル読み込み（asset/model/building.glb があれば表示）
+  //   ・無ければ何も出ない（壊れない）。まずは見た目確認用
+  //   ・位置/大きさ/向きは下の定数で調整。Meshy等の高ポリゴンは重い場合あり
+  //   ・既存のコード製建物とは別の場所(西側)に置いて見比べられるようにしている
+  // ---------------------------------------------------------------
+  var BUILDING_POS = { x: -48, y: 0, z: 16 };  // 敷地の西側。F(浮遊)で見に行ける
+  var BUILDING_TARGET_H = 9;                   // 高さの目安(m)。大小はここで調整
+  var BUILDING_ROT_Y = 0;                      // 向き(ラジアン)。裏向きなら Math.PI 等
+  (function loadBuildingModel() {
+    if (typeof THREE.GLTFLoader === "undefined") return;
+    new THREE.GLTFLoader().load("asset/model/building.glb", function (gltf) {
+      var model = gltf.scene;
+      var box = new THREE.Box3().setFromObject(model);
+      var size = new THREE.Vector3(); box.getSize(size);
+      var s = BUILDING_TARGET_H / (size.y || 1);
+      model.scale.setScalar(s);
+      box.setFromObject(model);
+      var center = new THREE.Vector3(); box.getCenter(center);
+      model.position.set(-center.x, -box.min.y, -center.z);  // 原点に中心・足元をy=0へ
+      var wrap = new THREE.Group();
+      wrap.add(model);
+      wrap.position.set(BUILDING_POS.x, BUILDING_POS.y, BUILDING_POS.z);
+      wrap.rotation.y = BUILDING_ROT_Y;
+      model.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      scene.add(wrap);
+    }, undefined, function () { /* 無ければ何もしない */ });
+  })();
+
   for (var bi = 0; bi < 30; bi++) {
     var bx2 = rand(-24, 40), bz2 = rand(-29, 56);
     if (!blockedForProp(bx2, bz2)) addBush(bx2, bz2);
