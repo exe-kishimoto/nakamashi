@@ -1751,10 +1751,11 @@
   var aimBrick = null;
 
   // 指定NDC座標のレイキャストで当たったレンガ情報を返す（無ければ null）
-  function pickBrick(ndc) {
+  function pickBrick(ndc, maxDist) {
+    maxDist = maxDist || 9;
     raycaster.setFromCamera(ndc, camera);
     var hits = raycaster.intersectObject(wallBox);
-    if (!hits.length || hits[0].distance > 9 || !hits[0].uv || !hits[0].face) return null;
+    if (!hits.length || hits[0].distance > maxDist || !hits[0].uv || !hits[0].face) return null;
     var h = hits[0];
     var info = wallFaceInfo[h.face.materialIndex];
     if (!info) return null;
@@ -1964,19 +1965,27 @@
       }
       var t = e.targetTouches[0];
       if (lookLast) {
+        // タップ判定中（まだ動いていない）は、しきい値を超えるまで視点を動かさない。
+        // これで「軽くタップ」しても視点がブレず、選択がキャンセルされない。
+        if (tapInfo && !tapInfo.moved) {
+          if (Math.abs(t.clientX - tapInfo.x) > 14 || Math.abs(t.clientY - tapInfo.y) > 14) {
+            tapInfo.moved = true;
+            lookLast = { x: t.clientX, y: t.clientY };  // ドラッグ開始点をここに
+          }
+          return;
+        }
         var dx = t.clientX - lookLast.x, dy = t.clientY - lookLast.y;
         // フリック（景色をつかんで動かす）操作: 指の向きと逆に視点が回る
         lookEuler.y += dx * LOOK_SENS;
         lookEuler.x = clamp(lookEuler.x + dy * LOOK_SENS, -PITCH_MAX, PITCH_MAX);
         camera.quaternion.setFromEuler(lookEuler);
         lookLast = { x: t.clientX, y: t.clientY };
-        if (tapInfo && (Math.abs(t.clientX - tapInfo.x) > 10 || Math.abs(t.clientY - tapInfo.y) > 10)) tapInfo.moved = true;
       }
     }, { passive: false });
     lookLayer.addEventListener("touchend", function (e) {
       e.preventDefault();
       if (e.targetTouches.length === 0) {
-        if (tapInfo && !tapInfo.moved && performance.now() - tapInfo.t < 300) tapSelect(tapInfo.x, tapInfo.y);
+        if (tapInfo && !tapInfo.moved && performance.now() - tapInfo.t < 500) tapSelect(tapInfo.x, tapInfo.y);
         lookLast = null; pinchLast = null; tapInfo = null;
       } else {
         var t = e.targetTouches[0];
@@ -1987,7 +1996,7 @@
     function tapSelect(cx, cy) {
       tryPlayVideo();
       var ndc = new THREE.Vector2((cx / window.innerWidth) * 2 - 1, -(cy / window.innerHeight) * 2 + 1);
-      var ab = pickBrick(ndc);
+      var ab = pickBrick(ndc, 26);   // タップは離れた壁でも拾えるよう距離を広げる
       if (ab) openBrickDialog(ab);
       else if (dialogOpen) closeBrickDialog();
     }
