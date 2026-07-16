@@ -2,10 +2,14 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>遠賀川水源地ポンプ室 メタバース保存プロジェクト（プロトタイプ）</title>
 <style>
-  html, body { margin:0; padding:0; overflow:hidden; background:#0b0e12; height:100%; }
+  html, body {
+    margin:0; padding:0; overflow:hidden; background:#0b0e12; height:100%;
+    touch-action:none; overscroll-behavior:none;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  }
   * { box-sizing:border-box; }
   canvas { display:block; }
   body { font-family: "Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif; }
@@ -94,6 +98,62 @@
   .bd-row .v { color:#e8e2d2; word-break:break-all; }
   #bd-message { margin-top:10px; font-size:13px; color:#d8cfa8; font-style:italic; line-height:1.6; }
   .bd-footer { margin-top:12px; font-size:11px; color:#8b97a0; }
+
+  /* ===== スマホ用タッチ操作 ===== */
+  /* 視点ドラッグ・ピンチ・タップを受け取る全画面レイヤー（UIの下） */
+  #look-layer {
+    position:fixed; inset:0; z-index:2; display:none;
+    touch-action:none; background:transparent;
+  }
+  /* タッチUIコンテナ */
+  #touch-ui { position:fixed; inset:0; z-index:12; display:none; pointer-events:none; }
+  #touch-ui * { pointer-events:auto; touch-action:none; -webkit-tap-highlight-color:transparent; }
+
+  /* 移動スティック（右下） */
+  #joystick {
+    position:fixed; right:26px; bottom:34px; width:132px; height:132px;
+    border-radius:50%; background:rgba(14,18,24,0.34);
+    border:1.5px solid rgba(200,162,74,0.45);
+    box-shadow:0 4px 18px rgba(0,0,0,0.35);
+  }
+  #joy-knob {
+    position:absolute; left:50%; top:50%; width:56px; height:56px;
+    margin:0; border-radius:50%;
+    background:radial-gradient(circle at 40% 35%, rgba(240,225,180,0.95), rgba(190,150,80,0.9));
+    border:1px solid rgba(255,255,255,0.5);
+    transform:translate(-50%,-50%);
+    box-shadow:0 2px 8px rgba(0,0,0,0.4);
+  }
+
+  /* アクションボタン（左下） */
+  #touch-buttons { position:fixed; left:20px; bottom:30px; display:flex; flex-direction:column-reverse; gap:12px; align-items:flex-start; }
+  .tbtn {
+    display:flex; align-items:center; justify-content:center;
+    font-family:inherit; color:#f2e6c9; font-weight:bold;
+    background:rgba(18,24,30,0.55); border:1.5px solid rgba(200,162,74,0.5);
+    border-radius:50%; outline:none; -webkit-appearance:none;
+    box-shadow:0 3px 12px rgba(0,0,0,0.35);
+  }
+  .tbtn.big { width:84px; height:84px; font-size:14px; }
+  .tbtn.small { width:58px; height:58px; font-size:12px; }
+  .tbtn.on { background:rgba(60,120,175,0.72); border-color:#7cc0ff; color:#eaf4ff; }
+  .tbtn:active { filter:brightness(1.25); }
+  #touch-small-row { display:flex; gap:12px; }
+
+  /* ダイアログの閉じるボタン（スマホ用） */
+  #bd-close {
+    position:absolute; right:8px; top:6px; width:34px; height:34px;
+    display:none; align-items:center; justify-content:center;
+    font-size:20px; color:#e7dcbb; cursor:pointer;
+    background:rgba(255,255,255,0.06); border-radius:50%;
+  }
+
+  /* 横向き・小画面での微調整 */
+  @media (max-height:480px) {
+    #joystick { width:112px; height:112px; bottom:20px; }
+    .tbtn.big { width:72px; height:72px; }
+    #touch-buttons { bottom:20px; }
+  }
 </style>
 </head>
 <body>
@@ -102,12 +162,32 @@
   <div class="panel">
     <h1>遠賀川水源地ポンプ室 メタバース保存プロジェクト</h1>
     <h2>プロトタイプ v1.0 — 赤レンガ・クリーム装飾・丸窓の真円化で理想画像に接近</h2>
-    <div class="start">クリックしてスタート</div>
-    <div class="keys">
+    <div class="start" id="start-btn">クリックしてスタート</div>
+    <div class="keys" id="keys-desktop">
       <b>W A S D</b>：移動　<b>Shift</b>：走る　<b>Space</b>：ジャンプ　マウス：視点<br>
       <b>ホイール</b>：ズーム　<b>左クリック</b>：照準のレンガを選択（刻印情報を表示）<br>
       <b>F</b>：浮遊モード（マイクラ風・Space上昇/Shift下降/Ctrl加速）<br>
       <b>Q</b>：ダイアログを閉じる　<b>M</b>:動画音声 ON/OFF　<b>ESC</b>：カーソル表示
+    </div>
+    <div class="keys" id="keys-mobile" style="display:none">
+      <b>右下スティック</b>：移動　<b>画面をドラッグ</b>：視点をまわす<br>
+      <b>2本指ピンチ</b>：ズーム　<b>レンガをタップ</b>：刻印情報を表示<br>
+      左下ボタン：<b>ジャンプ / 走る / 浮遊 / 🔇</b>
+    </div>
+  </div>
+</div>
+
+<div id="look-layer"></div>
+
+<div id="touch-ui">
+  <div id="joystick"><div id="joy-knob"></div></div>
+  <div id="touch-buttons">
+    <button id="tb-jump" class="tbtn big" type="button">ジャンプ</button>
+    <button id="tb-down" class="tbtn big" type="button" style="display:none">下降</button>
+    <div id="touch-small-row">
+      <button id="tb-run" class="tbtn small" type="button">走る</button>
+      <button id="tb-fly" class="tbtn small" type="button">浮遊</button>
+      <button id="tb-mute" class="tbtn small" type="button">🔇</button>
     </div>
   </div>
 </div>
@@ -131,6 +211,7 @@
 <div id="fly-badge">✈ 浮遊モード ON　Space:上昇 / Shift:下降 / Ctrl:加速</div>
 
 <div id="brick-dialog">
+  <div id="bd-close">✕</div>
   <canvas id="brick-zoom" width="320" height="150"></canvas>
   <div id="bd-badge" class="bd-badge empty">空きレンガ</div>
   <h3 id="bd-name">未登録</h3>
@@ -141,6 +222,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
-<script src="app.js?v=11"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>

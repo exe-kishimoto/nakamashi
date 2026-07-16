@@ -1581,9 +1581,46 @@
   var guide = document.getElementById("controls-guide");
   var flyBadge = document.getElementById("fly-badge");
 
-  function updateFlyBadge() { flyBadge.style.display = (flyMode && controls.isLocked) ? "block" : "none"; }
+  // タッチ端末判定 & スマホ用の入力状態
+  var isTouch = ("ontouchstart" in window) || (navigator.maxTouchPoints > 0);
+  var mobileActive = false;
+  var joy = { active: false, x: 0, y: 0 };   // x:右+ / y:前+（アナログ）
+  var touchRun = false;
+  var lookEuler = new THREE.Euler(0, Math.PI, 0, "YXZ");
+  var LOOK_SENS = 0.0042, PITCH_MAX = Math.PI / 2 - 0.05;
 
-  overlay.addEventListener("click", function () { controls.lock(); tryPlayVideo(); });
+  function active() { return controls.isLocked || mobileActive; }
+  function updateFlyBadge() { flyBadge.style.display = (flyMode && active()) ? "block" : "none"; }
+
+  if (isTouch) {
+    var kd = document.getElementById("keys-desktop");
+    var km = document.getElementById("keys-mobile");
+    if (kd) kd.style.display = "none";
+    if (km) km.style.display = "block";
+    var sb = document.getElementById("start-btn");
+    if (sb) sb.textContent = "タップしてスタート";
+  }
+
+  function startMobile() {
+    if (mobileActive) return;
+    mobileActive = true;
+    camera.rotation.order = "YXZ";
+    lookEuler.setFromQuaternion(camera.quaternion, "YXZ");
+    overlay.style.display = "none";
+    crosshair.style.display = "none";
+    hud.style.display = "none";
+    titleBadge.style.display = "block";
+    guide.style.display = "none";
+    document.getElementById("touch-ui").style.display = "block";
+    document.getElementById("look-layer").style.display = "block";
+    updateFlyBadge();
+    tryPlayVideo();
+  }
+
+  overlay.addEventListener("click", function () {
+    if (isTouch) { startMobile(); tryPlayVideo(); }
+    else { controls.lock(); tryPlayVideo(); }
+  });
   controls.addEventListener("lock", function () {
     overlay.style.display = "none"; crosshair.style.display = "block";
     hud.style.display = "block"; titleBadge.style.display = "block";
@@ -1648,19 +1685,21 @@
     if (keys["KeyS"] || keys["ArrowDown"]) moveZ -= 1;
     if (keys["KeyD"] || keys["ArrowRight"]) moveX += 1;
     if (keys["KeyA"] || keys["ArrowLeft"]) moveX -= 1;
-    var moving = (moveX !== 0 || moveZ !== 0);
+    if (joy.active) { moveX += joy.x; moveZ += joy.y; }
+    var mag = Math.hypot(moveX, moveZ);
+    var moving = mag > 0.12;              // スティックのデッドゾーン
+    var analog = Math.min(mag, 1);        // 傾き量で速度を可変（キーは常に1）
 
     if (flyMode) {
       // 浮遊モード: 重力なし・XZは視線方向、上下は Space / Shift。コライダー無視で自由に。
       var fspeed = (keys["ControlLeft"] || keys["KeyC"]) ? 22 : 11;
       if (moving) {
-        var flen = Math.hypot(moveX, moveZ);
-        moveX /= flen; moveZ /= flen;
+        moveX /= mag; moveZ /= mag;
         camera.getWorldDirection(forwardV);
         forwardV.y = 0; forwardV.normalize();
         rightV.set(-forwardV.z, 0, forwardV.x);
-        obj.position.x += (forwardV.x * moveZ + rightV.x * moveX) * fspeed * dt;
-        obj.position.z += (forwardV.z * moveZ + rightV.z * moveX) * fspeed * dt;
+        obj.position.x += (forwardV.x * moveZ + rightV.x * moveX) * fspeed * analog * dt;
+        obj.position.z += (forwardV.z * moveZ + rightV.z * moveX) * fspeed * analog * dt;
       }
       var up = 0;
       if (keys["Space"]) up += 1;
@@ -1675,13 +1714,12 @@
 
     var speed = (keys["ShiftLeft"] || keys["ShiftRight"]) ? 11 : 5.8;
     if (moving) {
-      var len = Math.hypot(moveX, moveZ);
-      moveX /= len; moveZ /= len;
+      moveX /= mag; moveZ /= mag;
       camera.getWorldDirection(forwardV);
       forwardV.y = 0; forwardV.normalize();
       rightV.set(-forwardV.z, 0, forwardV.x);
-      var dx = (forwardV.x * moveZ + rightV.x * moveX) * speed * dt;
-      var dz = (forwardV.z * moveZ + rightV.z * moveX) * speed * dt;
+      var dx = (forwardV.x * moveZ + rightV.x * moveX) * speed * analog * dt;
+      var dz = (forwardV.z * moveZ + rightV.z * moveX) * speed * analog * dt;
       var candX = obj.position.x + dx, candZ = obj.position.z + dz;
       if (!collides(candX, obj.position.z)) obj.position.x = candX;
       if (!collides(obj.position.x, candZ)) obj.position.z = candZ;
@@ -1712,18 +1750,14 @@
 
   var aimBrick = null;
 
-  function updateAim() {
-    aimBrick = null;
-    raycaster.setFromCamera(centerNDC, camera);
+  // 指定NDC座標のレイキャストで当たったレンガ情報を返す（無ければ null）
+  function pickBrick(ndc) {
+    raycaster.setFromCamera(ndc, camera);
     var hits = raycaster.intersectObject(wallBox);
-    if (!hits.length || hits[0].distance > 9 || !hits[0].uv || !hits[0].face) {
-      highlight.visible = false;
-      aimHint.style.display = "none";
-      return;
-    }
+    if (!hits.length || hits[0].distance > 9 || !hits[0].uv || !hits[0].face) return null;
     var h = hits[0];
     var info = wallFaceInfo[h.face.materialIndex];
-    if (!info) { highlight.visible = false; aimHint.style.display = "none"; return; }
+    if (!info) return null;
 
     var cw = Math.round(info.realW * PX_PER_M), ch = Math.round(info.realH * PX_PER_M);
     var cx = h.uv.x * cw, cy = (1 - h.uv.y) * ch;
@@ -1740,12 +1774,21 @@
       .add(info.uDir.clone().multiplyScalar((bcx - cx) / PX_PER_M))
       .add(new THREE.Vector3(0, (cy - bcy) / PX_PER_M, 0))
       .add(info.normal.clone().multiplyScalar(0.03));
-    highlight.position.copy(pos);
-    highlight.rotation.set(0, info.rotY, 0);
+    return { key: key, donor: donor, label: info.label + "-" + r + "-" + k, pos: pos, rotY: info.rotY };
+  }
+
+  function updateAim() {
+    aimBrick = pickBrick(centerNDC);
+    if (!aimBrick) {
+      highlight.visible = false;
+      aimHint.style.display = "none";
+      return;
+    }
+    var donor = aimBrick.donor;
+    highlight.position.copy(aimBrick.pos);
+    highlight.rotation.set(0, aimBrick.rotY, 0);
     highlight.material.color.set(donor ? 0xffd54a : 0xbfd8ff);
     highlight.visible = true;
-
-    aimBrick = { key: key, donor: donor, label: info.label + "-" + r + "-" + k };
     aimHint.textContent = donor ? "クリック: 「" + donor.engrave + "」の刻印を見る" : "クリック: 空きレンガ（未登録）";
     aimHint.style.display = "block";
   }
@@ -1845,6 +1888,156 @@
   });
 
   // ---------------------------------------------------------------
+  // スマホ用タッチ操作（スティック / 視点ドラッグ / ピンチ / タップ / ボタン）
+  // ---------------------------------------------------------------
+  (function setupTouch() {
+    // --- 移動スティック（右下） ---
+    var joyBase = document.getElementById("joystick");
+    var joyKnob = document.getElementById("joy-knob");
+    var joyId = null, joyCX = 0, joyCY = 0;
+    var JOY_R = 52;
+    function joyUpdate(t) {
+      var dx = t.clientX - joyCX, dy = t.clientY - joyCY;
+      var len = Math.hypot(dx, dy);
+      var cl = Math.min(len, JOY_R);
+      var ang = Math.atan2(dy, dx);
+      var kx = (len > 0.0001 ? Math.cos(ang) : 0) * cl;
+      var ky = (len > 0.0001 ? Math.sin(ang) : 0) * cl;
+      joyKnob.style.transform = "translate(calc(-50% + " + kx.toFixed(1) + "px), calc(-50% + " + ky.toFixed(1) + "px))";
+      joy.active = true;
+      joy.x = kx / JOY_R;   // 右+
+      joy.y = -ky / JOY_R;  // 上ドラッグ=前+
+    }
+    function joyReset() {
+      joyId = null; joy.active = false; joy.x = 0; joy.y = 0;
+      joyKnob.style.transform = "translate(-50%,-50%)";
+    }
+    joyBase.addEventListener("touchstart", function (e) {
+      e.preventDefault();
+      var t = e.changedTouches[0];
+      joyId = t.identifier;
+      var rect = joyBase.getBoundingClientRect();
+      joyCX = rect.left + rect.width / 2;
+      joyCY = rect.top + rect.height / 2;
+      joyUpdate(t);
+    }, { passive: false });
+    joyBase.addEventListener("touchmove", function (e) {
+      e.preventDefault();
+      for (var i = 0; i < e.changedTouches.length; i++)
+        if (e.changedTouches[i].identifier === joyId) joyUpdate(e.changedTouches[i]);
+    }, { passive: false });
+    function joyEnd(e) {
+      for (var i = 0; i < e.changedTouches.length; i++)
+        if (e.changedTouches[i].identifier === joyId) joyReset();
+    }
+    joyBase.addEventListener("touchend", joyEnd);
+    joyBase.addEventListener("touchcancel", joyEnd);
+
+    // --- 視点ドラッグ・ピンチ・タップ（全画面レイヤー） ---
+    var lookLayer = document.getElementById("look-layer");
+    var lookLast = null, pinchLast = null, tapInfo = null;
+    function touchDist(ts) {
+      var dx = ts[0].clientX - ts[1].clientX, dy = ts[0].clientY - ts[1].clientY;
+      return Math.hypot(dx, dy);
+    }
+    lookLayer.addEventListener("touchstart", function (e) {
+      e.preventDefault();
+      if (e.targetTouches.length >= 2) {
+        pinchLast = touchDist(e.targetTouches); lookLast = null; tapInfo = null;
+      } else {
+        var t = e.targetTouches[0];
+        lookLast = { x: t.clientX, y: t.clientY };
+        tapInfo = { x: t.clientX, y: t.clientY, t: performance.now(), moved: false };
+        pinchLast = null;
+      }
+    }, { passive: false });
+    lookLayer.addEventListener("touchmove", function (e) {
+      e.preventDefault();
+      if (e.targetTouches.length >= 2) {
+        var d = touchDist(e.targetTouches);
+        if (pinchLast != null) {
+          camera.fov = clamp(camera.fov - (d - pinchLast) * 0.08, 12, 75);
+          camera.updateProjectionMatrix();
+        }
+        pinchLast = d; lookLast = null; tapInfo = null;
+        return;
+      }
+      var t = e.targetTouches[0];
+      if (lookLast) {
+        var dx = t.clientX - lookLast.x, dy = t.clientY - lookLast.y;
+        lookEuler.y -= dx * LOOK_SENS;
+        lookEuler.x = clamp(lookEuler.x - dy * LOOK_SENS, -PITCH_MAX, PITCH_MAX);
+        camera.quaternion.setFromEuler(lookEuler);
+        lookLast = { x: t.clientX, y: t.clientY };
+        if (tapInfo && (Math.abs(t.clientX - tapInfo.x) > 10 || Math.abs(t.clientY - tapInfo.y) > 10)) tapInfo.moved = true;
+      }
+    }, { passive: false });
+    lookLayer.addEventListener("touchend", function (e) {
+      e.preventDefault();
+      if (e.targetTouches.length === 0) {
+        if (tapInfo && !tapInfo.moved && performance.now() - tapInfo.t < 300) tapSelect(tapInfo.x, tapInfo.y);
+        lookLast = null; pinchLast = null; tapInfo = null;
+      } else {
+        var t = e.targetTouches[0];
+        lookLast = { x: t.clientX, y: t.clientY }; pinchLast = null; tapInfo = null;
+      }
+    }, { passive: false });
+
+    function tapSelect(cx, cy) {
+      tryPlayVideo();
+      var ndc = new THREE.Vector2((cx / window.innerWidth) * 2 - 1, -(cy / window.innerHeight) * 2 + 1);
+      var ab = pickBrick(ndc);
+      if (ab) openBrickDialog(ab);
+      else if (dialogOpen) closeBrickDialog();
+    }
+
+    // --- アクションボタン ---
+    var tbJump = document.getElementById("tb-jump");
+    var tbDown = document.getElementById("tb-down");
+    var tbRun = document.getElementById("tb-run");
+    var tbFly = document.getElementById("tb-fly");
+    var tbMute = document.getElementById("tb-mute");
+
+    function bindHold(el, code) {
+      el.addEventListener("touchstart", function (e) { e.preventDefault(); e.stopPropagation(); keys[code] = true; }, { passive: false });
+      var up = function (e) { e.preventDefault(); keys[code] = false; };
+      el.addEventListener("touchend", up, { passive: false });
+      el.addEventListener("touchcancel", up, { passive: false });
+    }
+    bindHold(tbJump, "Space");       // 通常=ジャンプ / 浮遊=上昇
+    bindHold(tbDown, "ShiftRight");  // 浮遊=下降
+
+    tbRun.addEventListener("touchstart", function (e) {
+      e.preventDefault(); e.stopPropagation();
+      touchRun = !touchRun; keys["ShiftLeft"] = touchRun;
+      tbRun.classList.toggle("on", touchRun);
+    }, { passive: false });
+
+    tbFly.addEventListener("touchstart", function (e) {
+      e.preventDefault(); e.stopPropagation();
+      flyMode = !flyMode; velY = 0; updateFlyBadge();
+      if (flyMode) { touchRun = false; keys["ShiftLeft"] = false; tbRun.classList.remove("on"); }
+      tbFly.classList.toggle("on", flyMode);
+      tbJump.textContent = flyMode ? "上昇" : "ジャンプ";
+      tbDown.style.display = flyMode ? "flex" : "none";
+      tbRun.style.display = flyMode ? "none" : "flex";
+    }, { passive: false });
+
+    tbMute.addEventListener("touchstart", function (e) {
+      e.preventDefault(); e.stopPropagation();
+      adMuted = !adMuted; setAdMuted(adMuted); tryPlayVideo();
+      tbMute.textContent = adMuted ? "🔇" : "🔊";
+    }, { passive: false });
+
+    // --- ダイアログの閉じるボタン（スマホ） ---
+    var bdClose = document.getElementById("bd-close");
+    if (isTouch) bdClose.style.display = "flex";
+    function doClose(e) { e.preventDefault(); e.stopPropagation(); closeBrickDialog(); }
+    bdClose.addEventListener("touchstart", doClose, { passive: false });
+    bdClose.addEventListener("click", doClose);
+  })();
+
+  // ---------------------------------------------------------------
   // メインループ
   // ---------------------------------------------------------------
   function animate() {
@@ -1853,6 +2046,8 @@
     if (controls.isLocked) {
       updateMovement(dt);
       updateAim();
+    } else if (mobileActive) {
+      updateMovement(dt);
     }
     renderer.render(scene, camera);
   }
