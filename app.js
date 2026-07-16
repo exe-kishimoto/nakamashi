@@ -1329,8 +1329,10 @@
     return false;
   }
 
-  function addTree(x, z, scale) {
-    scale = scale || 1;
+  // 木の配置を記録しておく（後で 3Dモデルに一括差し替えできるように）
+  var treePlacements = [];
+  var treeProcedural = [];
+  function buildProceduralTree(scale) {
     var g = new THREE.Group();
     var th = rand(3.0, 5.0) * scale;
     var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16 * scale, 0.32 * scale, th, 7), trunkMat);
@@ -1342,9 +1344,16 @@
       fol.position.set(rand(-1.2, 1.2) * scale, th + rand(-0.4, 1.3) * scale, rand(-1.2, 1.2) * scale);
       g.add(fol);
     }
+    return g;
+  }
+  function addTree(x, z, scale) {
+    scale = scale || 1;
+    treePlacements.push({ x: x, z: z, scale: scale });
+    var g = buildProceduralTree(scale);   // まず手続き生成の木を置く（モデルが無い時のフォールバック）
     g.position.set(x, 0, z);
     g.rotation.y = rand(0, Math.PI * 2);
     scene.add(g);
+    treeProcedural.push(g);
   }
   function addBush(x, z) {
     var r = rand(0.5, 1.0);
@@ -1392,6 +1401,32 @@
   addTree(28, 52, 1.0);
   addTree(-40, -30, 0.9);
   addTree(46, -34, 1.0);
+
+  // ---------------------------------------------------------------
+  // 木の 3Dモデル差し替え（asset/model/tree.glb があれば全部の木を置き換える）
+  //   ・ファイルが無ければ何もしない（手続き生成の木のまま＝壊れない）
+  //   ・モデルの元サイズを自動計測して TREE_TARGET_H(m) に正規化 → どんな木でも合う
+  // ---------------------------------------------------------------
+  var TREE_TARGET_H = 4.5;   // シーン内での木の高さ目安(m)。大きすぎ/小さすぎたらここを調整
+  (function loadTreeModel() {
+    if (typeof THREE.GLTFLoader === "undefined") return;
+    new THREE.GLTFLoader().load("asset/model/tree.glb", function (gltf) {
+      var model = gltf.scene;
+      var box = new THREE.Box3().setFromObject(model);
+      var size = new THREE.Vector3(); box.getSize(size);
+      var norm = TREE_TARGET_H / (size.y || 1);   // 元の高さを目標高さに合わせる倍率
+      treeProcedural.forEach(function (g) { scene.remove(g); });   // 手続き生成の木を撤去
+      treePlacements.forEach(function (p) {
+        var m = model.clone(true);
+        var s = norm * p.scale;
+        m.scale.setScalar(s);
+        m.position.set(p.x, -box.min.y * s, p.z);   // 足元を地面(y=0)に合わせる
+        m.rotation.y = rand(0, Math.PI * 2);
+        m.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+        scene.add(m);
+      });
+    }, undefined, function () { /* 読み込み失敗（ファイル無し等）→ 手続き生成の木のまま */ });
+  })();
 
   for (var bi = 0; bi < 30; bi++) {
     var bx2 = rand(-24, 40), bz2 = rand(-29, 56);
