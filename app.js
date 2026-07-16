@@ -1965,8 +1965,9 @@
       var t = e.targetTouches[0];
       if (lookLast) {
         var dx = t.clientX - lookLast.x, dy = t.clientY - lookLast.y;
-        lookEuler.y -= dx * LOOK_SENS;
-        lookEuler.x = clamp(lookEuler.x - dy * LOOK_SENS, -PITCH_MAX, PITCH_MAX);
+        // フリック（景色をつかんで動かす）操作: 指の向きと逆に視点が回る
+        lookEuler.y += dx * LOOK_SENS;
+        lookEuler.x = clamp(lookEuler.x + dy * LOOK_SENS, -PITCH_MAX, PITCH_MAX);
         camera.quaternion.setFromEuler(lookEuler);
         lookLast = { x: t.clientX, y: t.clientY };
         if (tapInfo && (Math.abs(t.clientX - tapInfo.x) > 10 || Math.abs(t.clientY - tapInfo.y) > 10)) tapInfo.moved = true;
