@@ -148,6 +148,55 @@
     background:rgba(255,255,255,0.06); border-radius:50%;
   }
 
+  /* ===== 設定（⚙️）とコントローラー配置 ===== */
+  #settings-btn {
+    position:fixed; right:14px; top:58px; z-index:13; display:none;
+    width:44px; height:44px; border-radius:50%;
+    align-items:center; justify-content:center;
+    background:rgba(18,24,30,0.6); border:1.5px solid rgba(200,162,74,0.5);
+    color:#f2e6c9; font-size:20px; cursor:pointer;
+    -webkit-tap-highlight-color:transparent; touch-action:none;
+    box-shadow:0 3px 12px rgba(0,0,0,0.35);
+  }
+  #settings-panel {
+    position:fixed; right:14px; top:110px; z-index:16; display:none;
+    width:268px; padding:14px; color:#eee; font-size:13px;
+    background:rgba(12,15,19,0.95); border:1px solid #c8a24a; border-radius:10px;
+    box-shadow:0 8px 40px rgba(0,0,0,0.5); touch-action:none;
+  }
+  #settings-panel h4 {
+    margin:0 0 8px; font-size:11px; color:#c8a24a; letter-spacing:0.06em;
+    border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;
+  }
+  #settings-panel .sec { margin-bottom:14px; }
+  .sbtn {
+    display:block; width:100%; margin:0 0 6px; padding:9px 10px;
+    font-family:inherit; font-size:12.5px; text-align:left;
+    background:#26303a; color:#e8e2d2; border:1px solid rgba(255,255,255,0.14);
+    border-radius:6px; cursor:pointer; -webkit-appearance:none; appearance:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .sbtn:disabled { opacity:0.42; cursor:default; }
+  .sbtn.on { background:#3c78af; border-color:#7cc0ff; color:#eaf4ff; }
+  .sbtn .tag { float:right; font-size:10px; color:#9fb0bd; font-weight:normal; }
+
+  /* 配置変更モード */
+  #layout-edit-bar {
+    position:fixed; left:50%; top:14px; transform:translateX(-50%); z-index:18; display:none;
+    align-items:center; gap:12px;
+    background:rgba(30,90,140,0.94); color:#eaf4ff; border:1px solid #7cc0ff;
+    border-radius:20px; padding:8px 10px 8px 16px; font-size:12.5px; white-space:nowrap;
+  }
+  #layout-edit-bar button {
+    font-family:inherit; font-size:12px; font-weight:bold; padding:6px 14px;
+    background:#eaf4ff; color:#12324e; border:none; border-radius:12px; cursor:pointer;
+  }
+  .drag-handle {
+    position:fixed; z-index:17; display:none;
+    border:2px dashed #7cc0ff; border-radius:14px;
+    background:rgba(60,120,175,0.25); touch-action:none; cursor:move;
+  }
+
   /* 横向き・小画面での微調整 */
   @media (max-height:480px) {
     #joystick { width:112px; height:112px; bottom:20px; }
@@ -192,6 +241,28 @@
   </div>
 </div>
 
+<div id="settings-btn">⚙</div>
+<div id="settings-panel">
+  <div class="sec">
+    <h4>操作方法</h4>
+    <button class="sbtn on" id="im-touch" type="button">タッチコントローラー</button>
+    <button class="sbtn" id="im-remote" type="button" disabled>スマホをリモコンに<span class="tag">準備中</span></button>
+    <button class="sbtn" id="im-gesture" type="button" disabled>ジェスチャー操作<span class="tag">準備中</span></button>
+  </div>
+  <div class="sec">
+    <h4>コントローラー配置</h4>
+    <button class="sbtn" id="lp-right" type="button">右手（スティック右）</button>
+    <button class="sbtn" id="lp-left" type="button">左手（スティック左）</button>
+    <button class="sbtn" id="lp-big" type="button">大画面（中央にまとめる）</button>
+    <button class="sbtn" id="lp-edit" type="button">✋ ドラッグで自由配置…</button>
+    <button class="sbtn" id="lp-reset" type="button">初期配置に戻す</button>
+  </div>
+  <button class="sbtn" id="settings-close" type="button">閉じる</button>
+</div>
+<div id="layout-edit-bar"><span>コントローラーをドラッグして移動</span><button id="layout-done" type="button">完了</button></div>
+<div class="drag-handle" id="dh-joystick"></div>
+<div class="drag-handle" id="dh-buttons"></div>
+
 <div id="crosshair"></div>
 <div id="aim-hint"></div>
 <div id="hud">レンガに照準を合わせて<b>左クリック</b>で刻印情報を表示。<b>ホイール</b>でズーム。</div>
@@ -225,6 +296,6 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-<script src="app.js?v=17"></script>
+<script src="app.js?v=18"></script>
 </body>
 </html>

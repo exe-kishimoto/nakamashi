@@ -1680,6 +1680,8 @@
   var touchRun = false;
   var lookEuler = new THREE.Euler(0, Math.PI, 0, "YXZ");
   var LOOK_SENS = 0.0042, PITCH_MAX = Math.PI / 2 - 0.05;
+  var layoutEditMode = false;          // ⚙️配置変更モード中は視点操作を止める
+  var applySavedLayout = function () { };  // setupSettings が実体を入れる
 
   function active() { return controls.isLocked || mobileActive; }
   function updateFlyBadge() { flyBadge.style.display = (flyMode && active()) ? "block" : "none"; }
@@ -1705,6 +1707,8 @@
     guide.style.display = "none";
     document.getElementById("touch-ui").style.display = "block";
     document.getElementById("look-layer").style.display = "block";
+    document.getElementById("settings-btn").style.display = "flex";
+    applySavedLayout();   // 保存済みのコントローラー配置を反映
     updateFlyBadge();
     tryPlayVideo();
   }
@@ -2035,6 +2039,7 @@
     }
     lookLayer.addEventListener("touchstart", function (e) {
       e.preventDefault();
+      if (layoutEditMode) return;
       if (e.targetTouches.length >= 2) {
         pinchLast = touchDist(e.targetTouches); lookLast = null; tapInfo = null;
       } else {
@@ -2046,6 +2051,7 @@
     }, { passive: false });
     lookLayer.addEventListener("touchmove", function (e) {
       e.preventDefault();
+      if (layoutEditMode) return;
       if (e.targetTouches.length >= 2) {
         var d = touchDist(e.targetTouches);
         if (pinchLast != null) {
@@ -2130,6 +2136,137 @@
       adMuted = !adMuted; setAdMuted(adMuted); tryPlayVideo();
       tbMute.textContent = adMuted ? "🔇" : "🔊";
     }, { passive: false });
+
+    // --- ⚙️ 設定 / コントローラー配置 ---
+    // 大画面だと既定の「左下ボタン + 右下スティック」は手が遠すぎるため、
+    // プリセット or ドラッグで自由に配置でき、localStorage に保存する。
+    // 「操作方法」は将来のスマホリモコン/ジェスチャーを差し込む枠だけ用意。
+    (function setupSettings() {
+      var settingsBtn = document.getElementById("settings-btn");
+      var panel = document.getElementById("settings-panel");
+      var editBar = document.getElementById("layout-edit-bar");
+      var joyEl = document.getElementById("joystick");
+      var btnsEl = document.getElementById("touch-buttons");
+      var targets = { joystick: joyEl, buttons: btnsEl };
+      var handles = { joystick: document.getElementById("dh-joystick"), buttons: document.getElementById("dh-buttons") };
+      var LS_KEY = "nakamashi.layout.v1";
+      var layout = null;
+
+      function load() { try { return JSON.parse(localStorage.getItem(LS_KEY) || "null"); } catch (e) { return null; } }
+      function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(layout)); } catch (e) { } }
+
+      // 画面内に収めつつ left/top で配置（既定の right/bottom 指定を打ち消す）
+      function setPos(el, left, top) {
+        var r = el.getBoundingClientRect();
+        left = clamp(left, 4, Math.max(4, window.innerWidth - r.width - 4));
+        top = clamp(top, 4, Math.max(4, window.innerHeight - r.height - 4));
+        el.style.left = left + "px"; el.style.top = top + "px";
+        el.style.right = "auto"; el.style.bottom = "auto";
+        return { left: left, top: top };
+      }
+      function applyLayout() {
+        if (!layout) return;
+        Object.keys(targets).forEach(function (k) {
+          if (layout[k]) setPos(targets[k], layout[k].left, layout[k].top);
+        });
+      }
+      function resetLayout() {
+        layout = null;
+        try { localStorage.removeItem(LS_KEY); } catch (e) { }
+        Object.keys(targets).forEach(function (k) {
+          var el = targets[k];
+          el.style.left = ""; el.style.top = ""; el.style.right = ""; el.style.bottom = "";
+        });
+      }
+      function snapshot() {
+        var o = {};
+        Object.keys(targets).forEach(function (k) {
+          var r = targets[k].getBoundingClientRect();
+          o[k] = { left: r.left, top: r.top };
+        });
+        return o;
+      }
+      applySavedLayout = function () { layout = load(); applyLayout(); };
+
+      function preset(kind) {
+        resetLayout();   // 一度既定に戻して実寸を測る
+        var W = window.innerWidth, H = window.innerHeight;
+        var jr = joyEl.getBoundingClientRect(), br = btnsEl.getBoundingClientRect();
+        var p = {};
+        if (kind === "right") {
+          p.joystick = { left: W - jr.width - 26, top: H - jr.height - 34 };
+          p.buttons = { left: 20, top: H - br.height - 30 };
+        } else if (kind === "left") {
+          p.joystick = { left: 26, top: H - jr.height - 34 };
+          p.buttons = { left: W - br.width - 20, top: H - br.height - 30 };
+        } else if (kind === "big") {
+          // 大画面向け: 中央下に左右をまとめ、両手が届く距離にする
+          var cx = W / 2;
+          p.joystick = { left: cx + 50, top: H - jr.height - 40 };
+          p.buttons = { left: cx - 50 - br.width, top: H - br.height - 40 };
+        }
+        layout = p; applyLayout(); layout = snapshot(); save();
+      }
+
+      function showHandles(show) {
+        Object.keys(handles).forEach(function (k) {
+          var h = handles[k];
+          if (!show) { h.style.display = "none"; return; }
+          var r = targets[k].getBoundingClientRect();
+          h.style.left = r.left + "px"; h.style.top = r.top + "px";
+          h.style.width = r.width + "px"; h.style.height = r.height + "px";
+          h.style.display = "block";
+        });
+      }
+      function setEdit(on) {
+        layoutEditMode = on;
+        editBar.style.display = on ? "flex" : "none";
+        panel.style.display = "none";
+        showHandles(on);
+      }
+
+      Object.keys(handles).forEach(function (k) {
+        var h = handles[k], t = targets[k];
+        var sx = 0, sy = 0, ol = 0, ot = 0, dragging = false;
+        h.addEventListener("pointerdown", function (e) {
+          e.preventDefault();
+          try { h.setPointerCapture(e.pointerId); } catch (err) { }
+          var r = t.getBoundingClientRect();
+          ol = r.left; ot = r.top; sx = e.clientX; sy = e.clientY; dragging = true;
+        });
+        h.addEventListener("pointermove", function (e) {
+          if (!dragging) return;
+          e.preventDefault();
+          var pos = setPos(t, ol + (e.clientX - sx), ot + (e.clientY - sy));
+          h.style.left = pos.left + "px"; h.style.top = pos.top + "px";
+        });
+        function end() {
+          if (!dragging) return;
+          dragging = false;
+          layout = snapshot(); save();
+        }
+        h.addEventListener("pointerup", end);
+        h.addEventListener("pointercancel", end);
+      });
+
+      function tap(el, fn) {
+        el.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); fn(); });
+      }
+      tap(settingsBtn, function () { panel.style.display = (panel.style.display === "block") ? "none" : "block"; });
+      tap(document.getElementById("settings-close"), function () { panel.style.display = "none"; });
+      tap(document.getElementById("lp-right"), function () { preset("right"); });
+      tap(document.getElementById("lp-left"), function () { preset("left"); });
+      tap(document.getElementById("lp-big"), function () { preset("big"); });
+      tap(document.getElementById("lp-reset"), function () { resetLayout(); });
+      tap(document.getElementById("lp-edit"), function () { setEdit(true); });
+      tap(document.getElementById("layout-done"), function () { setEdit(false); });
+
+      // 画面サイズ/向きが変わったら画面内に収め直す
+      window.addEventListener("resize", function () {
+        if (layout) applyLayout();
+        if (layoutEditMode) showHandles(true);
+      });
+    })();
 
     // --- ダイアログの閉じるボタン（スマホ） ---
     var bdClose = document.getElementById("bd-close");
