@@ -1403,29 +1403,57 @@
   addTree(46, -34, 1.0);
 
   // ---------------------------------------------------------------
-  // 木の 3Dモデル差し替え（asset/model/tree.glb があれば全部の木を置き換える）
-  //   ・ファイルが無ければ何もしない（手続き生成の木のまま＝壊れない）
-  //   ・モデルの元サイズを自動計測して TREE_TARGET_H(m) に正規化 → どんな木でも合う
+  // 木の 3Dモデル差し替え
+  //   asset/model/ に tree.obj(+tree.mtl) か tree.glb があれば全部の木を置き換える。
+  //   ・無ければ何もしない（手続き生成の木のまま＝壊れない）
+  //   ・元サイズを自動計測して TREE_TARGET_H(m) に正規化 → どんな木でも合う
   // ---------------------------------------------------------------
   var TREE_TARGET_H = 4.5;   // シーン内での木の高さ目安(m)。大きすぎ/小さすぎたらここを調整
+  var treeReplaced = false;
+  function useTreeModel(model) {
+    if (treeReplaced) return;   // obj/glb 二重適用を防ぐ
+    treeReplaced = true;
+    // 法線が無いOBJは陰影が出ないので補う
+    model.traverse(function (o) {
+      if (o.isMesh && o.geometry && !o.geometry.attributes.normal) o.geometry.computeVertexNormals();
+    });
+    var box = new THREE.Box3().setFromObject(model);
+    var size = new THREE.Vector3(); box.getSize(size);
+    var norm = TREE_TARGET_H / (size.y || 1);   // 元の高さを目標高さに合わせる倍率
+    treeProcedural.forEach(function (g) { scene.remove(g); });   // 手続き生成の木を撤去
+    treePlacements.forEach(function (p) {
+      var m = model.clone(true);
+      var s = norm * p.scale;
+      m.scale.setScalar(s);
+      m.position.set(p.x, -box.min.y * s, p.z);   // 足元を地面(y=0)に合わせる
+      m.rotation.y = rand(0, Math.PI * 2);
+      m.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      scene.add(m);
+    });
+  }
   (function loadTreeModel() {
-    if (typeof THREE.GLTFLoader === "undefined") return;
-    new THREE.GLTFLoader().load("asset/model/tree.glb", function (gltf) {
-      var model = gltf.scene;
-      var box = new THREE.Box3().setFromObject(model);
-      var size = new THREE.Vector3(); box.getSize(size);
-      var norm = TREE_TARGET_H / (size.y || 1);   // 元の高さを目標高さに合わせる倍率
-      treeProcedural.forEach(function (g) { scene.remove(g); });   // 手続き生成の木を撤去
-      treePlacements.forEach(function (p) {
-        var m = model.clone(true);
-        var s = norm * p.scale;
-        m.scale.setScalar(s);
-        m.position.set(p.x, -box.min.y * s, p.z);   // 足元を地面(y=0)に合わせる
-        m.rotation.y = rand(0, Math.PI * 2);
-        m.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-        scene.add(m);
-      });
-    }, undefined, function () { /* 読み込み失敗（ファイル無し等）→ 手続き生成の木のまま */ });
+    // OBJ（+MTLで色付け）を優先。Quaternius などはこの形式
+    if (typeof THREE.OBJLoader !== "undefined") {
+      var loadObj = function (materials) {
+        var obj = new THREE.OBJLoader();
+        if (materials) obj.setMaterials(materials);
+        obj.setPath("asset/model/");
+        obj.load("tree.obj", function (o) { useTreeModel(o); }, undefined, function () {});
+      };
+      if (typeof THREE.MTLLoader !== "undefined") {
+        var mtl = new THREE.MTLLoader();
+        mtl.setPath("asset/model/");
+        mtl.load("tree.mtl", function (materials) { materials.preload(); loadObj(materials); },
+          undefined, function () { loadObj(null); });   // mtl無し→obj単体
+      } else {
+        loadObj(null);
+      }
+    }
+    // glb も置いてあれば試す（任意）
+    if (typeof THREE.GLTFLoader !== "undefined") {
+      new THREE.GLTFLoader().load("asset/model/tree.glb", function (gltf) { useTreeModel(gltf.scene); },
+        undefined, function () {});
+    }
   })();
 
   for (var bi = 0; bi < 30; bi++) {
