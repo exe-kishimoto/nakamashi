@@ -1687,13 +1687,23 @@
   function updateFlyBadge() { flyBadge.style.display = (flyMode && active()) ? "block" : "none"; }
 
   // ⚙️ボタンはタイトルバッジの実高を測って真下に置く（機種・文字サイズで折り返すため）
+  // パネルは画面内に収まる高さに制限し、あふれたらスクロールさせる。
+  // 横向きスマホは CSS 高さが 300px 程度しかなく、ボタンの下に置くと入り切らないので
+  // その場合は画面上端から使う。
   function placeSettingsBtn() {
     var btn = document.getElementById("settings-btn");
     var panel = document.getElementById("settings-panel");
     var r = titleBadge.getBoundingClientRect();
     var top = (r.height ? r.bottom : 58) + 10;
     btn.style.top = top + "px";
-    panel.style.top = (top + 52) + "px";
+
+    var H = window.innerHeight;
+    var narrow = H < 460;
+    var pTop = narrow ? 8 : top + 52;
+    panel.style.top = pTop + "px";
+    // 横向きは⚙の真下に置けないぶん、⚙を覆って閉じられなくならないよう左隣にずらす
+    panel.style.right = narrow ? "68px" : "14px";
+    panel.style.maxHeight = Math.max(120, H - pTop - 12) + "px";
   }
 
   if (isTouch) {

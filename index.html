@@ -190,12 +190,19 @@
     -webkit-tap-highlight-color:transparent; touch-action:none;
     box-shadow:0 3px 12px rgba(0,0,0,0.35);
   }
+  /* max-height は JS で画面高から算出。横向きだと入り切らないので中身をスクロールさせる
+     （touch-action:none だと指でスクロールできなくなるため pan-y にすること） */
   #settings-panel {
     position:fixed; right:14px; top:110px; z-index:16; display:none;
     width:268px; padding:14px; color:#eee; font-size:13px;
     background:rgba(12,15,19,0.95); border:1px solid #c8a24a; border-radius:10px;
-    box-shadow:0 8px 40px rgba(0,0,0,0.5); touch-action:none;
+    box-shadow:0 8px 40px rgba(0,0,0,0.5);
+    overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
+    touch-action:pan-y;
   }
+  /* スクロールできることが分かるように細いバーを出す */
+  #settings-panel::-webkit-scrollbar { width:5px; }
+  #settings-panel::-webkit-scrollbar-thumb { background:rgba(200,162,74,0.5); border-radius:3px; }
   #settings-panel h4 {
     margin:0 0 8px; font-size:11px; color:#c8a24a; letter-spacing:0.06em;
     border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;
@@ -335,6 +342,6 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-<script src="app.js?v=20"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>
