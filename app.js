@@ -1710,13 +1710,20 @@
     panel.style.right = narrow ? "68px" : "14px";
     panel.style.maxHeight = Math.max(120, H - pTop - 12) + "px";
   }
-  // Android は回転時の resize が古いサイズのまま飛んでくることがあり、
-  // その1回だけで決めると横向きなのに縦向きの高さで max-height を計算してしまう
-  // （＝はみ出したままスクロールも効かない）。少し遅れて測り直す。
-  function placeSettingsBtnSoon() {
-    placeSettingsBtn();
-    setTimeout(placeSettingsBtn, 250);
-    setTimeout(placeSettingsBtn, 700);
+  // Android は回転時の resize が「回転前の古いサイズ」のまま飛んでくることがあり、
+  // その1回を信じて計算すると、横向きなのに縦向きの高さで組んでしまう。
+  // そこで resize イベントに頼らず、毎フレーム実寸を見て“変わったら組み直す”。
+  // （縦横比が変わるのはユーザー操作の一瞬だけなので、比較のコストは無視できる）
+  var reflowUI = function () { };   // setupSettings が実体を入れる
+  var lastVW = 0, lastVH = 0;
+  function watchViewport() {
+    var w = window.innerWidth, h = viewportH();
+    if (w === lastVW && h === lastVH) return;
+    lastVW = w; lastVH = h;
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    reflowUI();
   }
 
   if (isTouch) {
@@ -2302,14 +2309,12 @@
       tap(document.getElementById("layout-done"), function () { setEdit(false); });
 
       // 画面サイズ/向きが変わったら画面内に収め直す
-      function reflow() {
+      // 画面サイズ/向きが変わったら組み直す（呼び出しは watchViewport から）
+      reflowUI = function () {
         if (layout) applyLayout();
         if (layoutEditMode) showHandles(true);
-        if (mobileActive) placeSettingsBtnSoon();
-      }
-      window.addEventListener("resize", reflow);
-      window.addEventListener("orientationchange", reflow);
-      if (window.visualViewport) window.visualViewport.addEventListener("resize", reflow);
+        if (mobileActive) placeSettingsBtn();
+      };
     })();
 
     // --- 😊 顔の向きで視点移動（ジェスチャー操作） ---
@@ -2525,6 +2530,7 @@
   // ---------------------------------------------------------------
   function animate() {
     requestAnimationFrame(animate);
+    watchViewport();
     var dt = Math.min(clock.getDelta(), 0.05);
     if (controls.isLocked) {
       updateMovement(dt);
@@ -2536,9 +2542,5 @@
   }
   animate();
 
-  window.addEventListener("resize", function () {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
+  // ※ resize イベントは使わない。回転直後は古い値が来るため watchViewport で実寸を監視する。
 })();
