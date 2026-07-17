@@ -40,6 +40,7 @@ start.bat をダブルクリック
 | `start.bat` | ローカルサーバー起動用（ASCIIのみ） |
 | `asset/ad-movie-1.mp4` | 紹介動画（動画広告1）。※旧・日本語名からASCII名へリネーム |
 | `asset/exemate.png` | スポンサー静止画（静止画広告1） |
+| `asset/model/character.glb` | 歩く人（Meshy等の生成＋アニメ付き）。無ければ出ない |
 | `asset/ad-movie-2.mp4`, `ad-movie-3.mp4` | 追加の動画広告（無ければ「準備中」表示） |
 | `asset/ad-image-2.png`, `ad-image-3.png` | 追加の静止画広告（無ければ「準備中」表示） |
 
@@ -76,6 +77,16 @@ Three.js は r128（クラシックなグローバルビルド、CDN読み込み
   UV 向きに依存しているため Three.js のバージョンを変える場合は要再確認。
 - ハイライト表示（金色=登録済み / 青白=空き）→ クリックで HTML ダイアログに
   拡大レンガ（Canvas 再描画）と登録情報を表示。
+
+### キャラクター（`loadCharacter`）
+
+`asset/model/character.glb` があれば正面通路（x=0.9）を往復させる。実測メモ:
+身長1.69m・足元 y=0・**+Z向き**（`headfront` とつま先の rest pose 座標から判定）・
+骨は cm 単位で Armature が 0.01 倍。同梱アニメは
+`Walking`(その場) / `Running`(その場) / `walking_2_inplace` / `walking_2`(**root motion**) /
+`Arm_Circle_Shuffle`(移動あり)。**その場アニメ＋コードで移動**が原則で、root motion 版を
+使うと自前移動と二重に進む。スキンメッシュは `frustumCulled=false`（バインドポーズの箱で
+可視判定され、腕を下ろすと消えるため）。
 
 ### 建物・環境
 

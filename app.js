@@ -1485,6 +1485,56 @@
     }, undefined, function () { /* 無ければ何もしない */ });
   })();
 
+  // ---------------------------------------------------------------
+  // 【お試し】キャラクター（asset/model/character.glb があれば通路を歩く）
+  //   ・モデルの実測: 身長1.69m・足元y=0・**+Z向き**（headfront とつま先の位置から確認）。
+  //     等身大なので拡大縮小は不要。
+  //   ・アニメは "Walking"（その場足踏み）を再生し、移動はコードで行う。
+  //     同梱の "walking_2" は前進が焼き込まれた root motion 版なので、
+  //     自前で動かすと二重に進んでしまう。混ぜないこと。
+  //   ・骨は cm 単位で Armature が 0.01 倍している（Hips のY=91.2 → 0.912m）。
+  //     位置合わせで数値を見る時に驚かないように。
+  // ---------------------------------------------------------------
+  var charMixer = null, charStep = null;
+  (function loadCharacter() {
+    if (typeof THREE.GLTFLoader === "undefined") return;
+    var LANE_X = 0.9;          // 通路の中心（正面扉と同じ x）
+    var Z0 = -26, Z1 = -3.5;   // 門の手前 ←→ 扉の手前 を往復
+    var SPEED = 1.15;          // m/s。足が滑るならアニメの歩幅に合わせてここを調整
+    var TURN_RATE = 3.0;       // rad/s。折り返しをカクッとさせない
+    new THREE.GLTFLoader().load("asset/model/character.glb", function (gltf) {
+      var root = gltf.scene;
+      root.traverse(function (o) {
+        if (o.isMesh) {
+          o.castShadow = true; o.receiveShadow = false;
+          // スキンメッシュはバインドポーズの箱で可視判定されるため、
+          // 腕を下ろすと箱から外れて消えることがある。判定を切る。
+          o.frustumCulled = false;
+        }
+      });
+      root.position.set(LANE_X, 0, Z0);
+      scene.add(root);
+
+      charMixer = new THREE.AnimationMixer(root);
+      var clip = THREE.AnimationClip.findByName(gltf.animations, "Walking") || gltf.animations[0];
+      if (clip) charMixer.clipAction(clip).play();
+
+      var dir = 1, yaw = 0;
+      charStep = function (dt) {
+        root.position.z += SPEED * dt * dir;
+        if (root.position.z > Z1) { root.position.z = Z1; dir = -1; }
+        else if (root.position.z < Z0) { root.position.z = Z0; dir = 1; }
+        // +Z 向きのモデルなので、+Z へ進む時が yaw=0
+        var target = (dir > 0) ? 0 : Math.PI;
+        var d = target - yaw;
+        while (d > Math.PI) d -= Math.PI * 2;
+        while (d < -Math.PI) d += Math.PI * 2;
+        yaw += clamp(d, -TURN_RATE * dt, TURN_RATE * dt);
+        root.rotation.y = yaw;
+      };
+    }, undefined, function () { /* 無ければ何もしない */ });
+  })();
+
   for (var bi = 0; bi < 30; bi++) {
     var bx2 = rand(-24, 40), bz2 = rand(-29, 56);
     if (!blockedForProp(bx2, bz2)) addBush(bx2, bz2);
@@ -2681,6 +2731,7 @@
     requestAnimationFrame(animate);
     watchViewport();
     var dt = Math.min(clock.getDelta(), 0.05);
+    if (charMixer) { charMixer.update(dt); charStep(dt); }   // キャラクターは常に歩かせる
     if (controls.isLocked) {
       updateMovement(dt);
       updateAim();   // 照準（レンガのハイライト）はロック中だけ
