@@ -1686,6 +1686,7 @@
   // この解除では「クリックしてスタート」のオーバーレイを出さないので、その区別に使う。
   var settingsMode = false;
   var toggleSettingsPanel = function () { };  // setupSettings が実体を入れる
+  var closeSettingsPanel = function () { };   // 同上
 
   function active() { return controls.isLocked || mobileActive; }
   function updateFlyBadge() { flyBadge.style.display = (flyMode && active()) ? "block" : "none"; }
@@ -1761,6 +1762,9 @@
     if (imt) imt.textContent = "マウス＋キーボード";
     var sbtn = document.getElementById("settings-btn");
     if (sbtn) sbtn.title = "設定（O キー）";
+    // 「閉じる＝操作に戻る」「ESC＝スタート画面へ」の区別を明示する
+    var sc = document.getElementById("settings-close");
+    if (sc) sc.textContent = "閉じる（操作に戻る）";
   }
 
   function startMobile() {
@@ -1798,9 +1802,8 @@
     updateFlyBadge();
     tryPlayVideo();
   });
-  controls.addEventListener("unlock", function () {
-    // 設定を開くための解除なら、オーバーレイは出さずに画面をそのまま見せておく
-    if (settingsMode) { crosshair.style.display = "none"; aimHint.style.display = "none"; return; }
+  // 操作をやめてスタート画面（オーバーレイ）に戻った時の見た目
+  function showOverlayUI() {
     document.getElementById("settings-btn").style.display = "none";
     overlay.style.display = "flex"; crosshair.style.display = "none";
     hud.style.display = "none"; titleBadge.style.display = "none";
@@ -1808,7 +1811,19 @@
     aimHint.style.display = "none";
     flyBadge.style.display = "none";
     closeBrickDialog();
+  }
+  controls.addEventListener("unlock", function () {
+    // 設定を開くための解除なら、オーバーレイは出さずに画面をそのまま見せておく
+    if (settingsMode) { crosshair.style.display = "none"; aimHint.style.display = "none"; return; }
+    showOverlayUI();
   });
+  // 設定を開いている間はポインターロックが外れているので、ESC はブラウザにも
+  // PointerLockControls にも拾われない。ここで拾って「設定を閉じてから ESC」を不要にする。
+  function exitFromSettings() {
+    settingsMode = false;   // closeSettingsPanel に再ロックさせない
+    closeSettingsPanel();
+    showOverlayUI();
+  }
 
   var keys = {};
   window.addEventListener("keydown", function (e) {
@@ -1818,6 +1833,7 @@
     if (e.code === "KeyQ") closeBrickDialog();
     if (e.code === "KeyF" && !e.repeat) { flyMode = !flyMode; velY = 0; updateFlyBadge(); }
     if (e.code === "KeyO" && !e.repeat && !isTouch) toggleSettingsPanel();
+    if (e.code === "Escape" && settingsMode) exitFromSettings();
   });
   window.addEventListener("keyup", function (e) { keys[e.code] = false; });
   window.addEventListener("wheel", function (e) {
@@ -2352,6 +2368,7 @@
         }
         openPanel();
       };
+      closeSettingsPanel = closePanel;
       tap(settingsBtn, function () {
         if (panel.style.display === "block") closePanel(); else openPanel();
       });
