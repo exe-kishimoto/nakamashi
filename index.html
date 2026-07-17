@@ -226,6 +226,7 @@
   .sbtn:disabled { opacity:0.42; cursor:default; }
   .sbtn.on { background:#3c78af; border-color:#7cc0ff; color:#eaf4ff; }
   .sbtn .tag { float:right; font-size:10px; color:#9fb0bd; font-weight:normal; }
+  .sbtn.gsub { margin-left:10px; width:calc(100% - 10px); font-size:12px; }
 
   /* 配置変更モード */
   #layout-edit-bar {
@@ -296,7 +297,9 @@
     <button class="sbtn on" id="im-touch" type="button">タッチコントローラー</button>
     <button class="sbtn" id="im-remote" type="button" disabled>スマホをリモコンに<span class="tag">準備中</span></button>
     <button class="sbtn" id="im-gesture" type="button">😊 顔で視点移動<span class="tag">カメラ使用</span></button>
-    <button class="sbtn" id="im-gesture-invert" type="button" style="display:none">左右の向きを反転</button>
+    <button class="sbtn gsub" id="im-gesture-head" type="button" style="display:none">└ 顔の向きで回す<span class="tag">首が疲れにくい設定</span></button>
+    <button class="sbtn gsub" id="im-gesture-gaze" type="button" style="display:none">└ 視線（目だけ）で回す<span class="tag">お試し</span></button>
+    <button class="sbtn gsub" id="im-gesture-invert" type="button" style="display:none">└ 左右の向きを反転</button>
   </div>
   <div class="sec touch-only">
     <h4>コントローラー配置</h4>
@@ -352,6 +355,6 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-<script src="app.js?v=25"></script>
+<script src="app.js?v=26"></script>
 </body>
 </html>
