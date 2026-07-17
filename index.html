@@ -304,9 +304,11 @@
 
 <div id="touch-ui">
   <div id="joystick"><div id="joy-knob"></div></div>
+  <!-- flex-direction:column-reverse なので、DOMの先頭が画面の一番下に出る。
+       浮遊モードでは 下降 を最下段・上昇 をその上に置く（上が上、下が下で直感どおり） -->
   <div id="touch-buttons">
-    <button id="tb-jump" class="tbtn big" type="button">ジャンプ</button>
     <button id="tb-down" class="tbtn big" type="button" style="display:none">下降</button>
+    <button id="tb-jump" class="tbtn big" type="button">ジャンプ</button>
     <div id="touch-small-row">
       <button id="tb-run" class="tbtn small" type="button">走る</button>
       <button id="tb-fly" class="tbtn small" type="button">浮遊</button>
