@@ -232,6 +232,7 @@
   .sens-label { font-size:12px; color:#c3ccd2; margin-bottom:2px; }
   .sens-label b { color:#f2e6c9; }
   .sens-scale { display:flex; justify-content:space-between; font-size:10px; color:#8b97a0; }
+  .sens-hint { margin-top:6px; font-size:10.5px; line-height:1.5; color:#a8c0d0; }
   /* スライダー自身は横ドラッグを使うので、パネルの pan-y を打ち消す */
   #gs-sens {
     width:100%; margin:0; touch-action:none; -webkit-appearance:none; appearance:none;
@@ -325,6 +326,7 @@
       <div class="sens-label">感度 <b id="gs-sens-val">1.0</b></div>
       <input type="range" id="gs-sens" min="0.3" max="3" step="0.1" value="1">
       <div class="sens-scale"><span>ゆっくり</span><span>きびきび</span></div>
+      <div class="sens-hint">この設定を開いたまま顔を動かすと、後ろの景色が回ります。見ながら合わせてください。</div>
     </div>
     <button class="sbtn gsub" id="im-gesture-invert" type="button" style="display:none">左右の向きを反転</button>
   </div>
@@ -382,6 +384,6 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-<script src="app.js?v=27"></script>
+<script src="app.js?v=28"></script>
 </body>
 </html>

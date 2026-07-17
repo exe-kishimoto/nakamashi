@@ -2413,7 +2413,13 @@
       var cur = { yaw: 0, pitch: 0 };   // 平滑化した顔の向き
       var seen = false, lastT = 0, lastVideoT = -1, lastDetect = 0;
 
-      function setStatus(t, cls) { statusEl.textContent = t; statusEl.className = cls || ""; }
+      // 状態はカメラプレビュー（左上）だけでなくボタンの右肩にも出す。
+      // PCはプレビューとパネルが左右に離れていて、準備中なのか壊れたのか分からないため。
+      var btnTag = btn.querySelector(".tag");
+      function setStatus(t, cls, tag) {
+        statusEl.textContent = t; statusEl.className = cls || "";
+        if (btnTag) btnTag.textContent = tag || t.split("\n")[0];
+      }
 
       function loadMediaPipe(cb, err) {
         if (window.__mpVision) { cb(window.__mpVision); return; }
@@ -2508,15 +2514,18 @@
           try { res = lm.detectForVideo(video, now); } catch (e) { return; }
           var a = read(res);
           if (a) {
-            if (!seen) { seen = true; cur.yaw = a.yaw; cur.pitch = a.pitch; setStatus("顔を認識中", "ok"); }
+            if (!seen) { seen = true; cur.yaw = a.yaw; cur.pitch = a.pitch; setStatus("顔を認識中", "ok", "ON"); }
             cur.yaw += (a.yaw - cur.yaw) * SMOOTH;
             cur.pitch += (a.pitch - cur.pitch) * SMOOTH;
           } else if (seen) {
-            seen = false; setStatus("顔が見つかりません");
+            seen = false; setStatus("顔が見つかりません", "", "顔が写っていません");
           }
         }
-        // active() が false = PCで設定を開いている最中など。顔だけで勝手に回らないように
-        if (seen && base && !calibrating && !layoutEditMode && active()) applyLook(dt);
+        // 設定を開いている間もあえて動かす。閉じるまで無反応だと「壊れてる？」となるし、
+        // 感度スライダーは効き具合を見ながらでないと合わせられない（FPSの設定と同じ）。
+        // layoutEditMode（コントローラーをドラッグ中）だけは邪魔なので止める。
+        var live = active() || settingsMode;
+        if (seen && base && !calibrating && !layoutEditMode && live) applyLook(dt);
       }
 
       // 正面を向いた状態を基準にする（人によってカメラの角度も姿勢も違うため）
@@ -2532,7 +2541,7 @@
           calibEl.style.display = "none";
           calibrating = false;
           base = seen ? { yaw: cur.yaw, pitch: cur.pitch } : { yaw: 0, pitch: 0 };
-          setStatus("顔を向けると視点が回ります", "ok");
+          setStatus("顔を向けると視点が回ります", "ok", "ON");
         }, 1000);
       }
 
@@ -2570,6 +2579,7 @@
         calibEl.style.display = "none";
         showSubUI(false);
         btn.classList.remove("on");
+        if (btnTag) btnTag.textContent = "カメラ使用";
       }
 
       function start() {
@@ -2578,7 +2588,7 @@
         function alive() { return my === token; }
         function fail(msg) {
           if (!alive()) return;
-          setStatus(msg, "err");
+          setStatus(msg, "err", "エラー");
           on = false; loading = false;
           closeCam();
           btn.classList.remove("on");
@@ -2586,11 +2596,11 @@
         loading = true;
         btn.classList.add("on");
         wrap.style.display = "block";
-        setStatus("カメラを準備中…");
+        setStatus("カメラを準備中…", "", "準備中…");
         startCam(function () {
           if (!alive()) { closeCam(); return; }
           // wasm + モデルで数MB。回線次第で十数秒かかるので初回だけである旨を出す
-          setStatus("認識モデルを取得中…\n（初回のみ・数MB）");
+          setStatus("認識モデルを取得中…\n（初回のみ・数MB）", "", "取得中…");
           loadMediaPipe(function (mp) {
             if (!alive()) { closeCam(); return; }
             createLandmarker(mp, function (landmarker) {
