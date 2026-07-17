@@ -1704,6 +1704,14 @@
     if (vv && vv.height) h = Math.min(h, vv.height);
     return h;
   }
+  function viewportW() {
+    var w = window.innerWidth;
+    var de = document.documentElement;
+    if (de && de.clientWidth) w = Math.min(w, de.clientWidth);
+    var vv = window.visualViewport;
+    if (vv && vv.width) w = Math.min(w, vv.width);
+    return w;
+  }
   function placeSettingsBtn() {
     var btn = document.getElementById("settings-btn");
     var panel = document.getElementById("settings-panel");
@@ -1726,7 +1734,7 @@
   var reflowUI = function () { };   // setupSettings が実体を入れる
   var lastVW = 0, lastVH = 0;
   function watchViewport() {
-    var w = window.innerWidth, h = viewportH();
+    var w = viewportW(), h = viewportH();
     if (w === lastVW && h === lastVH) return;
     lastVW = w; lastVH = h;
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -2181,6 +2189,7 @@
       tbJump.textContent = flyMode ? "上昇" : "ジャンプ";
       tbDown.style.display = flyMode ? "flex" : "none";
       tbRun.style.display = flyMode ? "none" : "flex";
+      reflowUI();   // ボタンが増減して高さが変わるので画面内に収め直す
     }, { passive: false });
 
     tbMute.addEventListener("touchstart", function (e) {
@@ -2208,10 +2217,12 @@
       function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(layout)); } catch (e) { } }
 
       // 画面内に収めつつ left/top で配置（既定の right/bottom 指定を打ち消す）
+      // はみ出しの判定は必ず viewportW/H（fixed の基準に合わせた実寸）で行う。
+      // innerWidth/Height はブラウザUIを含むことがあり、縦→横で画面外に置いてしまう。
       function setPos(el, left, top) {
         var r = el.getBoundingClientRect();
-        left = clamp(left, 4, Math.max(4, window.innerWidth - r.width - 4));
-        top = clamp(top, 4, Math.max(4, window.innerHeight - r.height - 4));
+        left = clamp(left, 4, Math.max(4, viewportW() - r.width - 4));
+        top = clamp(top, 4, Math.max(4, viewportH() - r.height - 4));
         el.style.left = left + "px"; el.style.top = top + "px";
         el.style.right = "auto"; el.style.bottom = "auto";
         return { left: left, top: top };
@@ -2242,7 +2253,7 @@
 
       function preset(kind) {
         resetLayout();   // 一度既定に戻して実寸を測る
-        var W = window.innerWidth, H = window.innerHeight;
+        var W = viewportW(), H = viewportH();
         var jr = joyEl.getBoundingClientRect(), br = btnsEl.getBoundingClientRect();
         var p = {};
         if (kind === "right") {
