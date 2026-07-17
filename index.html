@@ -140,6 +140,13 @@
   .tbtn:active { filter:brightness(1.25); }
   #touch-small-row { display:flex; gap:12px; }
 
+  /* 音声トグルは左上に固定（移動系ボタンとは別枠・配置変更の対象外） */
+  #tb-mute {
+    position:fixed; left:14px; top:12px; width:46px; height:46px; font-size:18px;
+  }
+  /* 浮遊バッジは左上の🔇と並べる */
+  body.mobile #fly-badge { left:70px; }
+
   /* ダイアログの閉じるボタン（スマホ用） */
   #bd-close {
     position:absolute; right:8px; top:6px; width:34px; height:34px;
@@ -149,8 +156,9 @@
   }
 
   /* ===== 設定（⚙️）とコントローラー配置 ===== */
+  /* top は startMobile 時にタイトルバッジの実高から JS で決める（重なり防止） */
   #settings-btn {
-    position:fixed; right:14px; top:58px; z-index:13; display:none;
+    position:fixed; right:14px; top:70px; z-index:13; display:none;
     width:44px; height:44px; border-radius:50%;
     align-items:center; justify-content:center;
     background:rgba(18,24,30,0.6); border:1.5px solid rgba(200,162,74,0.5);
@@ -221,7 +229,7 @@
     <div class="keys" id="keys-mobile" style="display:none">
       <b>右下スティック</b>：移動　<b>画面をドラッグ</b>：視点をまわす<br>
       <b>2本指ピンチ</b>：ズーム　<b>レンガをタップ</b>：刻印情報を表示<br>
-      左下ボタン：<b>ジャンプ / 走る / 浮遊 / 🔇</b>
+      左下ボタン：<b>ジャンプ / 走る / 浮遊</b>　左上：<b>🔇</b>（動画の音）
     </div>
   </div>
 </div>
@@ -236,9 +244,9 @@
     <div id="touch-small-row">
       <button id="tb-run" class="tbtn small" type="button">走る</button>
       <button id="tb-fly" class="tbtn small" type="button">浮遊</button>
-      <button id="tb-mute" class="tbtn small" type="button">🔇</button>
     </div>
   </div>
+  <button id="tb-mute" class="tbtn" type="button">🔇</button>
 </div>
 
 <div id="settings-btn">⚙</div>
@@ -296,6 +304,6 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-<script src="app.js?v=18"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>

@@ -1686,6 +1686,16 @@
   function active() { return controls.isLocked || mobileActive; }
   function updateFlyBadge() { flyBadge.style.display = (flyMode && active()) ? "block" : "none"; }
 
+  // ⚙️ボタンはタイトルバッジの実高を測って真下に置く（機種・文字サイズで折り返すため）
+  function placeSettingsBtn() {
+    var btn = document.getElementById("settings-btn");
+    var panel = document.getElementById("settings-panel");
+    var r = titleBadge.getBoundingClientRect();
+    var top = (r.height ? r.bottom : 58) + 10;
+    btn.style.top = top + "px";
+    panel.style.top = (top + 52) + "px";
+  }
+
   if (isTouch) {
     var kd = document.getElementById("keys-desktop");
     var km = document.getElementById("keys-mobile");
@@ -1708,6 +1718,9 @@
     document.getElementById("touch-ui").style.display = "block";
     document.getElementById("look-layer").style.display = "block";
     document.getElementById("settings-btn").style.display = "flex";
+    document.body.classList.add("mobile");
+    flyBadge.textContent = "✈ 浮遊モード ON";   // キー説明はスマホでは不要
+    placeSettingsBtn();
     applySavedLayout();   // 保存済みのコントローラー配置を反映
     updateFlyBadge();
     tryPlayVideo();
@@ -2265,6 +2278,7 @@
       window.addEventListener("resize", function () {
         if (layout) applyLayout();
         if (layoutEditMode) showHandles(true);
+        if (mobileActive) placeSettingsBtn();
       });
     })();
 
