@@ -1688,7 +1688,9 @@
   var toggleSettingsPanel = function () { };  // setupSettings が実体を入れる
   var closeSettingsPanel = function () { };   // 同上
 
-  function active() { return controls.isLocked || mobileActive; }
+  // 操作中か。PCで設定を開いている間（settingsMode）も「操作中」に含める。
+  // 顔の感度や配置は、歩いたり見回したりしながらでないと合わせられないため。
+  function active() { return controls.isLocked || mobileActive || settingsMode; }
   function updateFlyBadge() { flyBadge.style.display = (flyMode && active()) ? "block" : "none"; }
 
   // ⚙️ボタンはタイトルバッジの実高を測って真下に置く（機種・文字サイズで折り返すため）
@@ -2346,8 +2348,14 @@
         h.addEventListener("pointercancel", end);
       });
 
+      // 押したボタンにフォーカスを残さない。残すと Space（ジャンプ）や Enter が
+      // そのボタンの再クリックとして効いてしまう（設定表示中も移動できるため）。
       function tap(el, fn) {
-        el.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); fn(); });
+        el.addEventListener("click", function (e) {
+          e.preventDefault(); e.stopPropagation();
+          if (el.blur) el.blur();
+          fn();
+        });
       }
       function openPanel() {
         placeSettingsBtn();   // 開く直前に実寸で測る（回転直後でも確実）
@@ -2538,11 +2546,10 @@
             seen = false; setStatus("顔が見つかりません", "", "顔が写っていません");
           }
         }
-        // 設定を開いている間もあえて動かす。閉じるまで無反応だと「壊れてる？」となるし、
-        // 感度スライダーは効き具合を見ながらでないと合わせられない（FPSの設定と同じ）。
+        // active() は設定表示中も true。閉じるまで無反応だと「壊れてる？」となるし、
+        // 感度は効き具合を見ながらでないと合わせられない（FPSの設定と同じ）。
         // layoutEditMode（コントローラーをドラッグ中）だけは邪魔なので止める。
-        var live = active() || settingsMode;
-        if (seen && base && !calibrating && !layoutEditMode && live) applyLook(dt);
+        if (seen && base && !calibrating && !layoutEditMode && active()) applyLook(dt);
       }
 
       // 正面を向いた状態を基準にする（人によってカメラの角度も姿勢も違うため）
@@ -2633,8 +2640,12 @@
         }, fail);
       }
 
-      function onTap(el, fn) {
-        el.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); fn(); });
+      function onTap(el, fn) {   // フォーカスを残さない理由は setupSettings の tap と同じ
+        el.addEventListener("click", function (e) {
+          e.preventDefault(); e.stopPropagation();
+          if (el.blur) el.blur();
+          fn();
+        });
       }
       onTap(btn, function () { if (on || loading) stop(); else start(); });
       onTap(invBtn, function () {
@@ -2672,9 +2683,9 @@
     var dt = Math.min(clock.getDelta(), 0.05);
     if (controls.isLocked) {
       updateMovement(dt);
-      updateAim();
-    } else if (mobileActive) {
-      updateMovement(dt);
+      updateAim();   // 照準（レンガのハイライト）はロック中だけ
+    } else if (active()) {
+      updateMovement(dt);   // スマホ、およびPCで設定を開いている間
     }
     renderer.render(scene, camera);
   }
