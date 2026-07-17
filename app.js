@@ -1690,6 +1690,11 @@
   // パネルは画面内に収まる高さに制限し、あふれたらスクロールさせる。
   // 横向きスマホは CSS 高さが 300px 程度しかなく、ボタンの下に置くと入り切らないので
   // その場合は画面上端から使う。
+  // visualViewport の方がアドレスバー込みの実際の可視高を返す（無ければ innerHeight）
+  function viewportH() {
+    var vv = window.visualViewport;
+    return (vv && vv.height) ? vv.height : window.innerHeight;
+  }
   function placeSettingsBtn() {
     var btn = document.getElementById("settings-btn");
     var panel = document.getElementById("settings-panel");
@@ -1697,13 +1702,21 @@
     var top = (r.height ? r.bottom : 58) + 10;
     btn.style.top = top + "px";
 
-    var H = window.innerHeight;
+    var H = viewportH();
     var narrow = H < 460;
     var pTop = narrow ? 8 : top + 52;
     panel.style.top = pTop + "px";
     // 横向きは⚙の真下に置けないぶん、⚙を覆って閉じられなくならないよう左隣にずらす
     panel.style.right = narrow ? "68px" : "14px";
     panel.style.maxHeight = Math.max(120, H - pTop - 12) + "px";
+  }
+  // Android は回転時の resize が古いサイズのまま飛んでくることがあり、
+  // その1回だけで決めると横向きなのに縦向きの高さで max-height を計算してしまう
+  // （＝はみ出したままスクロールも効かない）。少し遅れて測り直す。
+  function placeSettingsBtnSoon() {
+    placeSettingsBtn();
+    setTimeout(placeSettingsBtn, 250);
+    setTimeout(placeSettingsBtn, 700);
   }
 
   if (isTouch) {
@@ -2275,7 +2288,11 @@
       function tap(el, fn) {
         el.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); fn(); });
       }
-      tap(settingsBtn, function () { panel.style.display = (panel.style.display === "block") ? "none" : "block"; });
+      tap(settingsBtn, function () {
+        var show = (panel.style.display !== "block");
+        if (show) placeSettingsBtn();   // 開く直前に実寸で測る（回転直後でも確実）
+        panel.style.display = show ? "block" : "none";
+      });
       tap(document.getElementById("settings-close"), function () { panel.style.display = "none"; });
       tap(document.getElementById("lp-right"), function () { preset("right"); });
       tap(document.getElementById("lp-left"), function () { preset("left"); });
@@ -2285,11 +2302,14 @@
       tap(document.getElementById("layout-done"), function () { setEdit(false); });
 
       // 画面サイズ/向きが変わったら画面内に収め直す
-      window.addEventListener("resize", function () {
+      function reflow() {
         if (layout) applyLayout();
         if (layoutEditMode) showHandles(true);
-        if (mobileActive) placeSettingsBtn();
-      });
+        if (mobileActive) placeSettingsBtnSoon();
+      }
+      window.addEventListener("resize", reflow);
+      window.addEventListener("orientationchange", reflow);
+      if (window.visualViewport) window.visualViewport.addEventListener("resize", reflow);
     })();
 
     // --- 😊 顔の向きで視点移動（ジェスチャー操作） ---
