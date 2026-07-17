@@ -1690,10 +1690,19 @@
   // パネルは画面内に収まる高さに制限し、あふれたらスクロールさせる。
   // 横向きスマホは CSS 高さが 300px 程度しかなく、ボタンの下に置くと入り切らないので
   // その場合は画面上端から使う。
-  // visualViewport の方がアドレスバー込みの実際の可視高を返す（無ければ innerHeight）
+  // 画面の高さは端末・ブラウザで3つの値が食い違う:
+  //   documentElement.clientHeight … レイアウトビューポート（position:fixed の基準はこれ）
+  //   visualViewport.height        … 実際に見えている領域（アドレスバー・ピンチで変わる）
+  //   innerHeight                  … その中間で、chrome を含むことがある
+  // fixed 配置の要素の高さを別の基準で決めると、画面外にはみ出したまま中身だけ
+  // スクロールする（＝最後までスクロールしても見えない）ので、最小値を採って必ず収める。
   function viewportH() {
+    var h = window.innerHeight;
+    var de = document.documentElement;
+    if (de && de.clientHeight) h = Math.min(h, de.clientHeight);
     var vv = window.visualViewport;
-    return (vv && vv.height) ? vv.height : window.innerHeight;
+    if (vv && vv.height) h = Math.min(h, vv.height);
+    return h;
   }
   function placeSettingsBtn() {
     var btn = document.getElementById("settings-btn");
@@ -2340,14 +2349,18 @@
       var FULL = 0.42;      // 約24°傾けたら最高速
       var YAW_RATE = 1.5;   // rad/s（左右）
       var PITCH_RATE = 0.9; // rad/s（上下・控えめに）
-      var SMOOTH = 0.25;    // 検出値のローパス
+      var SMOOTH = 0.35;    // 検出値のローパス（検出が15fpsなので少し強めに追従させる）
+      // 顔検出は重い。毎フレーム(60fps)走らせると 3D 描画と食い合って全体がカクつく。
+      // 顔の動きは速くないので 15fps で十分。視点の回転自体は毎フレーム適用するので
+      // 検出を間引いても動きは滑らかなまま。
+      var DETECT_MS = 66;
 
       var on = false, loading = false, stream = null, lm = null;
       var token = 0;        // 準備中に OFF された非同期処理を捨てるための世代番号
       var invert = false, calibrating = false;
       var base = null;                  // 正面を向いた時の基準値
       var cur = { yaw: 0, pitch: 0 };   // 平滑化した顔の向き
-      var seen = false, lastT = 0, lastVideoT = -1;
+      var seen = false, lastT = 0, lastVideoT = -1, lastDetect = 0;
 
       function setStatus(t, cls) { statusEl.textContent = t; statusEl.className = cls || ""; }
 
@@ -2383,8 +2396,10 @@
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           err("この端末ではカメラを使えません"); return;
         }
+        // 顔の向きが分かれば良いので解像度は低いほど軽い（高解像度でも精度は上がらない）
         navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 320 }, height: { ideal: 240 } }, audio: false
+          video: { facingMode: "user", width: { ideal: 240 }, height: { ideal: 180 }, frameRate: { ideal: 15, max: 20 } },
+          audio: false
         }).then(function (st) {
           stream = st; video.srcObject = st;
           var p = video.play();
@@ -2426,7 +2441,9 @@
         lastT = now;
         if (!lm || video.readyState < 2) return;
 
-        if (video.currentTime !== lastVideoT) {   // 同じフレームを2度解析しない
+        // 間引き（DETECT_MS）＋ 同じ映像フレームは2度解析しない
+        if (now - lastDetect >= DETECT_MS && video.currentTime !== lastVideoT) {
+          lastDetect = now;
           lastVideoT = video.currentTime;
           var res = null;
           try { res = lm.detectForVideo(video, now); } catch (e) { return; }
@@ -2492,7 +2509,8 @@
         setStatus("カメラを準備中…");
         startCam(function () {
           if (!alive()) { closeCam(); return; }
-          setStatus("認識モデルを取得中…");
+          // wasm + モデルで数MB。回線次第で十数秒かかるので初回だけである旨を出す
+          setStatus("認識モデルを取得中…\n（初回のみ・数MB）");
           loadMediaPipe(function (mp) {
             if (!alive()) { closeCam(); return; }
             createLandmarker(mp, function (landmarker) {
