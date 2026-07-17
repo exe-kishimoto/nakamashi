@@ -2282,6 +2282,206 @@
       });
     })();
 
+    // --- 😊 顔の向きで視点移動（ジェスチャー操作） ---
+    // MediaPipe Face Landmarker を CDN から遅延読込（有効にした時だけ約3MB取得）。
+    // 顔の回転行列 facialTransformationMatrixes から yaw/pitch を取り出す。
+    // 「顔を向けた方向へ視点も飛ぶ」方式だと画面から目が離れて酔い、狙いも定まらないので、
+    // 傾けている“量”を回転“速度”に変換する（正面に戻せば止まる＝画面を見たまま回せる）。
+    (function setupGesture() {
+      var wrap = document.getElementById("face-cam-wrap");
+      var video = document.getElementById("face-cam");
+      var statusEl = document.getElementById("face-status");
+      var calibEl = document.getElementById("face-calib");
+      var calibCount = document.getElementById("face-calib-count");
+      var btn = document.getElementById("im-gesture");
+      var invBtn = document.getElementById("im-gesture-invert");
+
+      var MP_VER = "0.10.14";
+      var MP_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@" + MP_VER;
+      var MODEL_URL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/" +
+        "face_landmarker/float16/1/face_landmarker.task";
+
+      var DEAD = 0.10;      // 遊び（約6°）。呼吸・手ブレで視点が流れないように
+      var FULL = 0.42;      // 約24°傾けたら最高速
+      var YAW_RATE = 1.5;   // rad/s（左右）
+      var PITCH_RATE = 0.9; // rad/s（上下・控えめに）
+      var SMOOTH = 0.25;    // 検出値のローパス
+
+      var on = false, loading = false, stream = null, lm = null;
+      var token = 0;        // 準備中に OFF された非同期処理を捨てるための世代番号
+      var invert = false, calibrating = false;
+      var base = null;                  // 正面を向いた時の基準値
+      var cur = { yaw: 0, pitch: 0 };   // 平滑化した顔の向き
+      var seen = false, lastT = 0, lastVideoT = -1;
+
+      function setStatus(t, cls) { statusEl.textContent = t; statusEl.className = cls || ""; }
+
+      function loadMediaPipe(cb, err) {
+        if (window.__mpVision) { cb(window.__mpVision); return; }
+        // ES5 のクラシックスクリプトからは import できないので module スクリプトを差し込む
+        var s = document.createElement("script");
+        s.type = "module";
+        s.textContent =
+          "import { FilesetResolver, FaceLandmarker } from '" + MP_BASE + "';\n" +
+          "window.__mpVision = { FilesetResolver: FilesetResolver, FaceLandmarker: FaceLandmarker };\n" +
+          "window.dispatchEvent(new Event('mp-loaded'));";
+        var to = setTimeout(function () { err("読み込めませんでした（通信）"); }, 25000);
+        window.addEventListener("mp-loaded", function () {
+          clearTimeout(to); cb(window.__mpVision);
+        }, { once: true });
+        document.head.appendChild(s);
+      }
+
+      function createLandmarker(mp, cb, err) {
+        mp.FilesetResolver.forVisionTasks(MP_BASE + "/wasm").then(function (fs) {
+          return mp.FaceLandmarker.createFromOptions(fs, {
+            baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
+            runningMode: "VIDEO",
+            numFaces: 1,
+            outputFaceBlendshapes: false,
+            outputFacialTransformationMatrixes: true
+          });
+        }).then(cb, function (e) { err("モデルを準備できません: " + (e && e.message ? e.message : e)); });
+      }
+
+      function startCam(cb, err) {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          err("この端末ではカメラを使えません"); return;
+        }
+        navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", width: { ideal: 320 }, height: { ideal: 240 } }, audio: false
+        }).then(function (st) {
+          stream = st; video.srcObject = st;
+          var p = video.play();
+          if (p && p.catch) p.catch(function () { });
+          cb();
+        }, function (e) {
+          err(e && e.name === "NotAllowedError" ? "カメラが許可されませんでした" : "カメラを開けません");
+        });
+      }
+
+      // 4x4 列優先。R[row][col] = m[col*4+row]。第2列 = 顔の正面ベクトル（カメラ空間）
+      function faceAngles(m) {
+        var fx = m[8], fy = m[9], fz = m[10];
+        return { yaw: Math.atan2(fx, fz), pitch: Math.asin(clamp(fy, -1, 1)) };
+      }
+
+      // 遊びの外側だけ 0→1 に伸ばし、二乗で中央付近を穏やかにする
+      function rate(v) {
+        var a = Math.abs(v);
+        if (a <= DEAD) return 0;
+        var t = Math.min((a - DEAD) / (FULL - DEAD), 1);
+        return (v < 0 ? -1 : 1) * t * t;
+      }
+
+      function applyLook(dt) {
+        var ry = rate(cur.yaw - base.yaw) * YAW_RATE * dt * (invert ? -1 : 1);
+        var rp = rate(cur.pitch - base.pitch) * PITCH_RATE * dt;
+        if (ry === 0 && rp === 0) return;
+        lookEuler.y += ry;
+        lookEuler.x = clamp(lookEuler.x + rp, -PITCH_MAX, PITCH_MAX);
+        camera.quaternion.setFromEuler(lookEuler);
+      }
+
+      function tick() {
+        if (!on) return;
+        requestAnimationFrame(tick);
+        var now = performance.now();
+        var dt = lastT ? Math.min((now - lastT) / 1000, 0.05) : 0;
+        lastT = now;
+        if (!lm || video.readyState < 2) return;
+
+        if (video.currentTime !== lastVideoT) {   // 同じフレームを2度解析しない
+          lastVideoT = video.currentTime;
+          var res = null;
+          try { res = lm.detectForVideo(video, now); } catch (e) { return; }
+          var mats = res && res.facialTransformationMatrixes;
+          if (mats && mats.length) {
+            var a = faceAngles(mats[0].data);
+            if (!seen) { seen = true; cur.yaw = a.yaw; cur.pitch = a.pitch; setStatus("顔を認識中", "ok"); }
+            cur.yaw += (a.yaw - cur.yaw) * SMOOTH;
+            cur.pitch += (a.pitch - cur.pitch) * SMOOTH;
+          } else if (seen) {
+            seen = false; setStatus("顔が見つかりません");
+          }
+        }
+        if (seen && base && !calibrating && !layoutEditMode) applyLook(dt);
+      }
+
+      // 正面を向いた状態を基準にする（人によってカメラの角度も姿勢も違うため）
+      function calibrate() {
+        calibrating = true;
+        calibEl.style.display = "block";
+        var n = 3;
+        calibCount.textContent = n;
+        var iv = setInterval(function () {
+          n--;
+          if (n > 0) { calibCount.textContent = n; return; }
+          clearInterval(iv);
+          calibEl.style.display = "none";
+          calibrating = false;
+          base = seen ? { yaw: cur.yaw, pitch: cur.pitch } : { yaw: 0, pitch: 0 };
+          setStatus("顔を向けると視点が回ります", "ok");
+        }, 1000);
+      }
+
+      function closeCam() {
+        if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+        video.srcObject = null;
+      }
+
+      function stop() {
+        token++;
+        on = false; loading = false; base = null; seen = false; lastT = 0; lastVideoT = -1;
+        closeCam();
+        wrap.style.display = "none";
+        calibEl.style.display = "none";
+        invBtn.style.display = "none";
+        btn.classList.remove("on");
+      }
+
+      function start() {
+        if (loading || on) return;
+        var my = ++token;
+        function alive() { return my === token; }
+        function fail(msg) {
+          if (!alive()) return;
+          setStatus(msg, "err");
+          on = false; loading = false;
+          closeCam();
+          btn.classList.remove("on");
+        }
+        loading = true;
+        btn.classList.add("on");
+        wrap.style.display = "block";
+        setStatus("カメラを準備中…");
+        startCam(function () {
+          if (!alive()) { closeCam(); return; }
+          setStatus("認識モデルを取得中…");
+          loadMediaPipe(function (mp) {
+            if (!alive()) { closeCam(); return; }
+            createLandmarker(mp, function (landmarker) {
+              if (!alive()) { closeCam(); return; }
+              lm = landmarker; loading = false; on = true;
+              invBtn.style.display = "block";
+              requestAnimationFrame(tick);
+              calibrate();
+            }, fail);
+          }, fail);
+        }, fail);
+      }
+
+      function onTap(el, fn) {
+        el.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); fn(); });
+      }
+      onTap(btn, function () { if (on || loading) stop(); else start(); });
+      onTap(invBtn, function () {
+        invert = !invert;
+        invBtn.classList.toggle("on", invert);
+        if (on) calibrate();   // 反転したら基準も取り直す
+      });
+    })();
+
     // --- ダイアログの閉じるボタン（スマホ） ---
     var bdClose = document.getElementById("bd-close");
     if (isTouch) bdClose.style.display = "flex";

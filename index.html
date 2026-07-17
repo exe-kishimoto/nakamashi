@@ -155,6 +155,30 @@
     background:rgba(255,255,255,0.06); border-radius:50%;
   }
 
+  /* ===== ジェスチャー（顔の向きで視点移動） ===== */
+  /* カメラ映像の確認用プレビュー。鏡像にしないと「どっちに向けば良いか」が直感に反する */
+  #face-cam-wrap {
+    position:fixed; left:14px; top:66px; z-index:13; display:none;
+    width:104px; color:#dfe6ea; font-size:10.5px; text-align:center;
+  }
+  #face-cam {
+    width:104px; height:78px; object-fit:cover; display:block;
+    transform:scaleX(-1); background:#0b0e12;
+    border:1.5px solid rgba(200,162,74,0.5); border-radius:8px;
+  }
+  #face-status {
+    margin-top:3px; padding:2px 4px; border-radius:4px; line-height:1.4;
+    background:rgba(10,14,18,0.6);
+  }
+  #face-status.err { color:#ffb4a8; }
+  #face-status.ok { color:#a8e6b0; }
+  /* 正面を向いた状態を基準にするキャリブレーション案内 */
+  #face-calib {
+    position:fixed; left:50%; top:38%; transform:translateX(-50%); z-index:18; display:none;
+    background:rgba(30,90,140,0.94); color:#eaf4ff; border:1px solid #7cc0ff;
+    border-radius:12px; padding:14px 20px; font-size:14px; text-align:center; line-height:1.8;
+  }
+
   /* ===== 設定（⚙️）とコントローラー配置 ===== */
   /* top は startMobile 時にタイトルバッジの実高から JS で決める（重なり防止） */
   #settings-btn {
@@ -255,7 +279,8 @@
     <h4>操作方法</h4>
     <button class="sbtn on" id="im-touch" type="button">タッチコントローラー</button>
     <button class="sbtn" id="im-remote" type="button" disabled>スマホをリモコンに<span class="tag">準備中</span></button>
-    <button class="sbtn" id="im-gesture" type="button" disabled>ジェスチャー操作<span class="tag">準備中</span></button>
+    <button class="sbtn" id="im-gesture" type="button">😊 顔で視点移動<span class="tag">カメラ使用</span></button>
+    <button class="sbtn" id="im-gesture-invert" type="button" style="display:none">左右の向きを反転</button>
   </div>
   <div class="sec">
     <h4>コントローラー配置</h4>
@@ -267,6 +292,12 @@
   </div>
   <button class="sbtn" id="settings-close" type="button">閉じる</button>
 </div>
+<div id="face-cam-wrap">
+  <video id="face-cam" playsinline muted autoplay></video>
+  <div id="face-status">準備中…</div>
+</div>
+<div id="face-calib">正面（画面の中央）を見てください<br><span id="face-calib-count">3</span></div>
+
 <div id="layout-edit-bar"><span>コントローラーをドラッグして移動</span><button id="layout-done" type="button">完了</button></div>
 <div class="drag-handle" id="dh-joystick"></div>
 <div class="drag-handle" id="dh-buttons"></div>
@@ -304,6 +335,6 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-<script src="app.js?v=19"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>
