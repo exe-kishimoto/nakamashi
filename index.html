@@ -192,6 +192,12 @@
   }
   /* max-height は JS で画面高から算出。横向きだと入り切らないので中身をスクロールさせる
      （touch-action:none だと指でスクロールできなくなるため pan-y にすること） */
+  /* PCはポインターロック中カーソルが無く⚙を押せないので、Oキーで開くことを示す */
+  body:not(.mobile) #settings-btn::after {
+    content:"O"; position:absolute; right:-3px; bottom:-3px;
+    background:#26303a; border:1px solid rgba(255,255,255,0.18); color:#f2e6c9;
+    font-size:9px; font-weight:bold; line-height:1.6; border-radius:4px; padding:0 4px;
+  }
   #settings-panel {
     position:fixed; right:14px; top:110px; z-index:16; display:none;
     width:268px; padding:14px; color:#eee; font-size:13px;
@@ -208,6 +214,8 @@
     border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;
   }
   #settings-panel .sec { margin-bottom:14px; }
+  /* コントローラー配置はタッチ端末だけの話（body.mobile は startMobile で付く） */
+  body:not(.mobile) .touch-only { display:none; }
   .sbtn {
     display:block; width:100%; margin:0 0 6px; padding:9px 10px;
     font-family:inherit; font-size:12.5px; text-align:left;
@@ -255,6 +263,7 @@
       <b>W A S D</b>：移動　<b>Shift</b>：走る　<b>Space</b>：ジャンプ　マウス：視点<br>
       <b>ホイール</b>：ズーム　<b>左クリック</b>：照準のレンガを選択（刻印情報を表示）<br>
       <b>F</b>：浮遊モード（マイクラ風・Space上昇/Shift下降/Ctrl加速）<br>
+      <b>O</b>：設定（😊 顔で視点移動 など）<br>
       <b>Q</b>：ダイアログを閉じる　<b>M</b>:動画音声 ON/OFF　<b>ESC</b>：カーソル表示
     </div>
     <div class="keys" id="keys-mobile" style="display:none">
@@ -289,7 +298,7 @@
     <button class="sbtn" id="im-gesture" type="button">😊 顔で視点移動<span class="tag">カメラ使用</span></button>
     <button class="sbtn" id="im-gesture-invert" type="button" style="display:none">左右の向きを反転</button>
   </div>
-  <div class="sec">
+  <div class="sec touch-only">
     <h4>コントローラー配置</h4>
     <button class="sbtn" id="lp-right" type="button">右手（スティック右）</button>
     <button class="sbtn" id="lp-left" type="button">左手（スティック左）</button>
@@ -322,6 +331,7 @@
   <div class="cg-row"><span class="key">ホイール</span><span class="desc">ズーム</span></div>
   <div class="cg-row"><span class="key">左クリック</span><span class="desc">レンガを調べる</span></div>
   <div class="cg-row"><span class="key">F</span><span class="desc">浮遊モード（マイクラ風）</span></div>
+  <div class="cg-row"><span class="key">O</span><span class="desc">設定（顔で視点移動）</span></div>
   <div class="cg-row"><span class="key">M</span><span class="desc">動画の音</span><span class="key">ESC</span><span class="desc">解除</span></div>
 </div>
 

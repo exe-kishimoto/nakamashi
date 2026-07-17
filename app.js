@@ -1682,6 +1682,10 @@
   var LOOK_SENS = 0.0042, PITCH_MAX = Math.PI / 2 - 0.05;
   var layoutEditMode = false;          // ⚙️配置変更モード中は視点操作を止める
   var applySavedLayout = function () { };  // setupSettings が実体を入れる
+  // PCは設定を開く間だけポインターロックを外す（ロック中はカーソルが無く⚙を押せないため）。
+  // この解除では「クリックしてスタート」のオーバーレイを出さないので、その区別に使う。
+  var settingsMode = false;
+  var toggleSettingsPanel = function () { };  // setupSettings が実体を入れる
 
   function active() { return controls.isLocked || mobileActive; }
   function updateFlyBadge() { flyBadge.style.display = (flyMode && active()) ? "block" : "none"; }
@@ -1750,6 +1754,13 @@
     if (km) km.style.display = "block";
     var sb = document.getElementById("start-btn");
     if (sb) sb.textContent = "タップしてスタート";
+  } else {
+    // PCは⚙をクリックできない（ロック中はカーソルが無い）ので O キーで開く。
+    // 「操作方法」の現在値もPC向けの表記にする。
+    var imt = document.getElementById("im-touch");
+    if (imt) imt.textContent = "マウス＋キーボード";
+    var sbtn = document.getElementById("settings-btn");
+    if (sbtn) sbtn.title = "設定（O キー）";
   }
 
   function startMobile() {
@@ -1778,13 +1789,19 @@
     else { controls.lock(); tryPlayVideo(); }
   });
   controls.addEventListener("lock", function () {
+    settingsMode = false;
     overlay.style.display = "none"; crosshair.style.display = "block";
     hud.style.display = "block"; titleBadge.style.display = "block";
     guide.style.display = "block";
+    document.getElementById("settings-btn").style.display = "flex";
+    placeSettingsBtn();
     updateFlyBadge();
     tryPlayVideo();
   });
   controls.addEventListener("unlock", function () {
+    // 設定を開くための解除なら、オーバーレイは出さずに画面をそのまま見せておく
+    if (settingsMode) { crosshair.style.display = "none"; aimHint.style.display = "none"; return; }
+    document.getElementById("settings-btn").style.display = "none";
     overlay.style.display = "flex"; crosshair.style.display = "none";
     hud.style.display = "none"; titleBadge.style.display = "none";
     guide.style.display = "none";
@@ -1800,6 +1817,7 @@
     if (e.code === "KeyM") { adMuted = !adMuted; setAdMuted(adMuted); tryPlayVideo(); }
     if (e.code === "KeyQ") closeBrickDialog();
     if (e.code === "KeyF" && !e.repeat) { flyMode = !flyMode; velY = 0; updateFlyBadge(); }
+    if (e.code === "KeyO" && !e.repeat && !isTouch) toggleSettingsPanel();
   });
   window.addEventListener("keyup", function (e) { keys[e.code] = false; });
   window.addEventListener("wheel", function (e) {
@@ -2315,12 +2333,29 @@
       function tap(el, fn) {
         el.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); fn(); });
       }
+      function openPanel() {
+        placeSettingsBtn();   // 開く直前に実寸で測る（回転直後でも確実）
+        panel.style.display = "block";
+      }
+      function closePanel() {
+        panel.style.display = "none";
+        // PCで設定のために外していたロックを戻す（閉じるのクリック＝ユーザー操作なので lock 可）
+        if (settingsMode) { settingsMode = false; controls.lock(); }
+      }
+      // PCは O キーから、スマホは⚙のタップから呼ばれる共通の入口
+      toggleSettingsPanel = function () {
+        if (panel.style.display === "block") { closePanel(); return; }
+        if (!isTouch) {
+          if (!controls.isLocked) return;   // スタート前は開かない（オーバーレイの下になる）
+          settingsMode = true;
+          controls.unlock();
+        }
+        openPanel();
+      };
       tap(settingsBtn, function () {
-        var show = (panel.style.display !== "block");
-        if (show) placeSettingsBtn();   // 開く直前に実寸で測る（回転直後でも確実）
-        panel.style.display = show ? "block" : "none";
+        if (panel.style.display === "block") closePanel(); else openPanel();
       });
-      tap(document.getElementById("settings-close"), function () { panel.style.display = "none"; });
+      tap(document.getElementById("settings-close"), closePanel);
       tap(document.getElementById("lp-right"), function () { preset("right"); });
       tap(document.getElementById("lp-left"), function () { preset("left"); });
       tap(document.getElementById("lp-big"), function () { preset("big"); });
@@ -2333,7 +2368,7 @@
       reflowUI = function () {
         if (layout) applyLayout();
         if (layoutEditMode) showHandles(true);
-        if (mobileActive) placeSettingsBtn();
+        placeSettingsBtn();
       };
     })();
 
@@ -2439,6 +2474,9 @@
         var ry = rate(cur.yaw - base.yaw) * YAW_RATE * dt * (invert ? -1 : 1);
         var rp = rate(cur.pitch - base.pitch) * PITCH_RATE * dt;
         if (ry === 0 && rp === 0) return;
+        // PCのマウス視点(PointerLockControls)やスマホのドラッグで回った分を取り込んでから足す。
+        // これを省くと、他の操作で回した瞬間に顔の分だけ視点が飛ぶ。
+        lookEuler.setFromQuaternion(camera.quaternion, "YXZ");
         lookEuler.y += ry;
         lookEuler.x = clamp(lookEuler.x + rp, -PITCH_MAX, PITCH_MAX);
         camera.quaternion.setFromEuler(lookEuler);
@@ -2468,7 +2506,8 @@
             seen = false; setStatus("顔が見つかりません");
           }
         }
-        if (seen && base && !calibrating && !layoutEditMode) applyLook(dt);
+        // active() が false = PCで設定を開いている最中など。顔だけで勝手に回らないように
+        if (seen && base && !calibrating && !layoutEditMode && active()) applyLook(dt);
       }
 
       // 正面を向いた状態を基準にする（人によってカメラの角度も姿勢も違うため）
