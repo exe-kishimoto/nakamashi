@@ -2385,22 +2385,19 @@
       var calibCount = document.getElementById("face-calib-count");
       var btn = document.getElementById("im-gesture");
       var invBtn = document.getElementById("im-gesture-invert");
-      var headBtn = document.getElementById("im-gesture-head");
-      var gazeBtn = document.getElementById("im-gesture-gaze");
-      var subBtns = [headBtn, gazeBtn, invBtn];
+      var sensRow = document.getElementById("gs-sens-row");
+      var sensInput = document.getElementById("gs-sens");
+      var sensVal = document.getElementById("gs-sens-val");
 
       var MP_VER = "0.10.14";
       var MP_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@" + MP_VER;
       var MODEL_URL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/" +
         "face_landmarker/float16/1/face_landmarker.task";
 
-      // モード別の調整値。head は顔の向き（ラジアン）、gaze は目の動き（0..1のスコア）で
-      // 単位が違うため別々に持つ。dead=遊び / full=最高速に達する量 / yaw,pitch=最高速(rad/s)
-      var TUNE = {
-        head: { dead: 0.09, full: 0.30, yaw: 1.5, pitch: 0.9 },   // 約5°で反応・17°で最高速（首の負担を減らす）
-        gaze: { dead: 0.15, full: 0.55, yaw: 1.3, pitch: 0.8 }
-      };
-      var mode = "head";
+      var DEAD = 0.09;      // 遊び（約5°）。呼吸・手ブレで視点が流れないように
+      var FULL = 0.30;      // 約17°傾けたら最高速（首を大きく振らずに済む範囲）
+      var YAW_RATE = 1.5;   // 感度1.0のときの最高速 rad/s（左右）
+      var PITCH_RATE = 0.9; // 同（上下・控えめに）
       var SMOOTH = 0.35;    // 検出値のローパス（検出が15fpsなので少し強めに追従させる）
       // 顔検出は重い。毎フレーム(60fps)走らせると 3D 描画と食い合って全体がカクつく。
       // 顔の動きは速くないので 15fps で十分。視点の回転自体は毎フレーム適用するので
@@ -2410,6 +2407,8 @@
       var on = false, loading = false, stream = null, lm = null;
       var token = 0;        // 準備中に OFF された非同期処理を捨てるための世代番号
       var invert = false, calibrating = false;
+      var sens = 1.0;       // FPSの感度スライダーと同じ。最高速の倍率
+      var LS_KEY = "nakamashi.gesture.v1";
       var base = null;                  // 正面を向いた時の基準値
       var cur = { yaw: 0, pitch: 0 };   // 平滑化した顔の向き
       var seen = false, lastT = 0, lastVideoT = -1, lastDetect = 0;
@@ -2438,8 +2437,8 @@
             baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
             runningMode: "VIDEO",
             numFaces: 1,
-            outputFaceBlendshapes: true,             // 視線モード用（同じモデルに含まれる）
-            outputFacialTransformationMatrixes: true // 顔の向きモード用
+            outputFaceBlendshapes: false,            // 表情は使わないので出力しない（無駄に重い）
+            outputFacialTransformationMatrixes: true // 顔の向きだけ使う
           });
         }).then(cb, function (e) { err("モデルを準備できません: " + (e && e.message ? e.message : e)); });
       }
@@ -2462,51 +2461,28 @@
         });
       }
 
-      // yaw/pitch はどちらのモードでも符号の意味を揃える:
-      //   yaw +  = 左を向いた（lookEuler.y に足すと視点が左へ回る）
-      //   pitch += 上を向いた
+      // 符号の規約: yaw+ = 左を向いた（lookEuler.y に足すと視点が左へ回る） / pitch+ = 上を向いた
       // 4x4 列優先。R[row][col] = m[col*4+row]。第2列 = 顔の正面ベクトル（カメラ空間）
       function faceAngles(m) {
         var fx = m[8], fy = m[9], fz = m[10];
         return { yaw: Math.atan2(fx, fz), pitch: Math.asin(clamp(fy, -1, 1)) };
       }
-
-      // 目の動きは blendshape のスコアで得られる。In=鼻側 / Out=こめかみ側なので、
-      // 「本人から見て右を見る」＝ 左目In + 右目Out。
-      function gazeAngles(cats) {
-        var b = {};
-        for (var i = 0; i < cats.length; i++) b[cats[i].categoryName] = cats[i].score;
-        var right = ((b.eyeLookInLeft || 0) + (b.eyeLookOutRight || 0)) / 2;
-        var left = ((b.eyeLookOutLeft || 0) + (b.eyeLookInRight || 0)) / 2;
-        var up = ((b.eyeLookUpLeft || 0) + (b.eyeLookUpRight || 0)) / 2;
-        var down = ((b.eyeLookDownLeft || 0) + (b.eyeLookDownRight || 0)) / 2;
-        return { yaw: left - right, pitch: up - down };
-      }
-
-      // モードに応じて検出結果から yaw/pitch を取り出す（顔が写っていなければ null）
       function read(res) {
-        if (!res) return null;
-        if (mode === "gaze") {
-          var f = res.faceBlendshapes && res.faceBlendshapes[0];
-          return (f && f.categories) ? gazeAngles(f.categories) : null;
-        }
-        var mats = res.facialTransformationMatrixes;
+        var mats = res && res.facialTransformationMatrixes;
         return (mats && mats.length) ? faceAngles(mats[0].data) : null;
       }
 
       // 遊びの外側だけ 0→1 に伸ばし、二乗で中央付近を穏やかにする
       function rate(v) {
-        var t = TUNE[mode];
         var a = Math.abs(v);
-        if (a <= t.dead) return 0;
-        var k = Math.min((a - t.dead) / (t.full - t.dead), 1);
+        if (a <= DEAD) return 0;
+        var k = Math.min((a - DEAD) / (FULL - DEAD), 1);
         return (v < 0 ? -1 : 1) * k * k;
       }
 
       function applyLook(dt) {
-        var t = TUNE[mode];
-        var ry = rate(cur.yaw - base.yaw) * t.yaw * dt * (invert ? -1 : 1);
-        var rp = rate(cur.pitch - base.pitch) * t.pitch * dt;
+        var ry = rate(cur.yaw - base.yaw) * YAW_RATE * sens * dt * (invert ? -1 : 1);
+        var rp = rate(cur.pitch - base.pitch) * PITCH_RATE * sens * dt;
         if (ry === 0 && rp === 0) return;
         // PCのマウス視点(PointerLockControls)やスマホのドラッグで回った分を取り込んでから足す。
         // これを省くと、他の操作で回した瞬間に顔の分だけ視点が飛ぶ。
@@ -2546,8 +2522,6 @@
       // 正面を向いた状態を基準にする（人によってカメラの角度も姿勢も違うため）
       function calibrate() {
         calibrating = true;
-        calibEl.firstChild.nodeValue = (mode === "gaze")
-          ? "画面の中央をまっすぐ見てください" : "正面（画面の中央）を向いてください";
         calibEl.style.display = "block";
         var n = 3;
         calibCount.textContent = n;
@@ -2558,7 +2532,7 @@
           calibEl.style.display = "none";
           calibrating = false;
           base = seen ? { yaw: cur.yaw, pitch: cur.pitch } : { yaw: 0, pitch: 0 };
-          setStatus((mode === "gaze") ? "視線で視点が回ります" : "顔を向けると視点が回ります", "ok");
+          setStatus("顔を向けると視点が回ります", "ok");
         }, 1000);
       }
 
@@ -2567,15 +2541,25 @@
         video.srcObject = null;
       }
 
-      function showSubBtns(show) {
-        subBtns.forEach(function (b) { b.style.display = show ? "block" : "none"; });
+      function showSubUI(show) {
+        invBtn.style.display = show ? "block" : "none";
+        sensRow.style.display = show ? "block" : "none";
       }
-      function setMode(m) {
-        mode = m;
-        headBtn.classList.toggle("on", m === "head");
-        gazeBtn.classList.toggle("on", m === "gaze");
-        seen = false; base = null;   // 単位が変わるので基準を取り直す
-        if (on) calibrate();
+
+      // 感度と左右反転は端末・人によって好みが違うので保存する
+      function loadPrefs() {
+        var p = null;
+        try { p = JSON.parse(localStorage.getItem(LS_KEY) || "null"); } catch (e) { }
+        if (!p) return;
+        if (typeof p.sens === "number") sens = clamp(p.sens, 0.3, 3);
+        if (typeof p.invert === "boolean") invert = p.invert;
+      }
+      function savePrefs() {
+        try { localStorage.setItem(LS_KEY, JSON.stringify({ sens: sens, invert: invert })); } catch (e) { }
+      }
+      function showSens() {
+        sensInput.value = String(sens);
+        sensVal.textContent = sens.toFixed(1);
       }
 
       function stop() {
@@ -2584,7 +2568,7 @@
         closeCam();
         wrap.style.display = "none";
         calibEl.style.display = "none";
-        showSubBtns(false);
+        showSubUI(false);
         btn.classList.remove("on");
       }
 
@@ -2612,9 +2596,9 @@
             createLandmarker(mp, function (landmarker) {
               if (!alive()) { closeCam(); return; }
               lm = landmarker; loading = false; on = true;
-              showSubBtns(true);
-              headBtn.classList.toggle("on", mode === "head");
-              gazeBtn.classList.toggle("on", mode === "gaze");
+              showSubUI(true);
+              invBtn.classList.toggle("on", invert);
+              showSens();
               requestAnimationFrame(tick);
               calibrate();
             }, fail);
@@ -2626,13 +2610,22 @@
         el.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); fn(); });
       }
       onTap(btn, function () { if (on || loading) stop(); else start(); });
-      onTap(headBtn, function () { setMode("head"); });
-      onTap(gazeBtn, function () { setMode("gaze"); });
       onTap(invBtn, function () {
         invert = !invert;
         invBtn.classList.toggle("on", invert);
+        savePrefs();
         if (on) calibrate();   // 反転したら基準も取り直す
       });
+      // スライダーは click を止めると値が変わらないので onTap ではなく input を拾う。
+      // 動かした瞬間から効くので、視点を回しながら好みの位置を探せる。
+      sensInput.addEventListener("input", function (e) {
+        e.stopPropagation();
+        sens = clamp(parseFloat(sensInput.value) || 1, 0.3, 3);
+        sensVal.textContent = sens.toFixed(1);
+        savePrefs();
+      });
+      loadPrefs();
+      showSens();
     })();
 
     // --- ダイアログの閉じるボタン（スマホ） ---
