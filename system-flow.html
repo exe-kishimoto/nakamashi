@@ -227,6 +227,126 @@
   footer{border-top:1px solid var(--line); margin-top:80px; padding:28px 22px;
     text-align:center; color:var(--ink-soft); font-size:.82rem}
 
+  /* ---- stripe mark ---- */
+  .stripe-mark{display:inline-grid; place-items:center; background:#635bff; color:#fff;
+    font-weight:800; border-radius:5px; width:1.35em; height:1.35em; font-size:.9em;
+    line-height:1; flex:none; font-family:var(--font)}
+
+  /* ---- real photo figure ---- */
+  figure.photo{margin:0; border:1px solid var(--line); border-radius:var(--radius);
+    overflow:hidden; box-shadow:var(--shadow); background:var(--card)}
+  figure.photo img{display:block; width:100%; height:auto; max-height:420px; object-fit:cover}
+  figure.photo .ph-fallback{display:none}
+  figure.photo.noimg .ph-fallback{display:flex; flex-direction:column; gap:8px;
+    align-items:center; justify-content:center; text-align:center; min-height:220px;
+    padding:24px; color:var(--ink-soft); font-size:.86rem;
+    background:
+      repeating-linear-gradient(0deg, transparent 0 20px, color-mix(in srgb,var(--brick) 20%,transparent) 20px 22px),
+      repeating-linear-gradient(90deg, transparent 0 54px, color-mix(in srgb,var(--brick) 20%,transparent) 54px 56px),
+      color-mix(in srgb,var(--brick) 12%,var(--card))}
+  figure.photo.noimg img{display:none}
+  figure.photo code{font-family:var(--mono); font-size:.85em; background:var(--card-2);
+    padding:.1em .45em; border-radius:5px; color:var(--brick)}
+  figure.photo figcaption{padding:12px 16px; font-size:.84rem; color:var(--ink-soft);
+    border-top:1px solid var(--line)}
+
+  /* ---- phone mockups ---- */
+  .gallery{display:grid; grid-template-columns:repeat(auto-fit,minmax(215px,1fr));
+    gap:30px 22px; margin-top:14px; align-items:start}
+  .shot{display:flex; flex-direction:column; align-items:center}
+  .shot .cap{margin-top:16px; text-align:center; max-width:250px}
+  .shot .cap .st-num{display:inline-grid; place-items:center; width:26px; height:26px;
+    border-radius:50%; background:var(--brick); color:#fff; font-family:var(--mono);
+    font-weight:700; font-size:.82rem; margin-bottom:8px}
+  .shot.s-stripe .cap .st-num{background:#635bff}
+  .shot.s-3d .cap .st-num{background:var(--slate)}
+  .shot .cap h3{font-size:.98rem; margin:0 0 4px}
+  .shot .cap p{font-size:.82rem; color:var(--ink-soft); margin:0; max-width:none}
+  .shot .cap .backend{display:inline-block; margin-top:8px; font-size:.7rem; font-weight:700;
+    letter-spacing:.03em; color:#635bff; background:color-mix(in srgb,#635bff 12%,transparent);
+    border-radius:6px; padding:.2em .6em}
+
+  .phone{width:212px; max-width:100%; aspect-ratio:9/19; background:#0c0a09;
+    border-radius:32px; padding:8px; position:relative; flex:none;
+    box-shadow:0 0 0 2px #2a2622, 0 14px 34px rgba(30,15,5,.28)}
+  .phone .island{position:absolute; top:16px; left:50%; transform:translateX(-50%);
+    width:58px; height:15px; background:#0c0a09; border-radius:10px; z-index:4}
+  .screen{width:100%; height:100%; border-radius:25px; overflow:hidden;
+    background:#faf7f2; color:#241c16; display:flex; flex-direction:column;
+    font-size:11px; line-height:1.45}
+  .sbar{display:flex; justify-content:space-between; align-items:center;
+    padding:7px 16px 3px; font-size:9px; font-weight:700; color:#241c16; flex:none}
+  .sbar .sig{letter-spacing:1px}
+  .shead{background:var(--brick); color:#fff; padding:9px 12px; font-weight:800;
+    font-size:11px; display:flex; align-items:center; gap:6px; flex:none}
+  .shead.stripe{background:#635bff}
+  .sbody{padding:11px 12px; display:flex; flex-direction:column; gap:9px; flex:1; overflow:hidden}
+  .tabs{display:flex; gap:5px}
+  .tab{flex:1; text-align:center; font-size:9.5px; font-weight:700; padding:5px 0;
+    border-radius:7px; background:#efe7db; color:#8a7d70}
+  .tab.on{background:var(--brick); color:#fff}
+  .fld .lb{font-size:8.5px; color:#8a7d70; font-weight:700; margin-bottom:3px; letter-spacing:.02em}
+  .fld .bx{background:#fff; border:1px solid #e6ded2; border-radius:7px; padding:6px 8px;
+    font-size:10px; color:#241c16}
+  .fld .bx.ph{color:#b3a596}
+  .sw{display:flex; gap:7px}
+  .sw i{width:22px; height:22px; border-radius:6px; display:block; border:2px solid transparent}
+  .sw i.on{border-color:#241c16; box-shadow:0 0 0 2px #fff inset}
+  .icns{display:flex; gap:6px; font-size:15px}
+  .icns b{filter:grayscale(1); opacity:.55; font-style:normal}
+  .icns b.on{filter:none; opacity:1}
+  .pv{background:linear-gradient(135deg,#c9673f,#8f3c22); border-radius:8px; height:52px;
+    display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700;
+    font-size:9.5px; position:relative; overflow:hidden}
+  .pv::after{content:""; position:absolute; inset:0;
+    background-image:linear-gradient(90deg,rgba(255,255,255,.18) 1px,transparent 1px),
+      linear-gradient(0deg,rgba(255,255,255,.18) 1px,transparent 1px);
+    background-size:20px 10px}
+  .pv span{position:relative; z-index:1}
+  .btn{margin-top:auto; background:var(--brick); color:#fff; text-align:center;
+    font-weight:800; font-size:10.5px; padding:9px; border-radius:9px}
+  .btn.stripe{background:#635bff}
+  .btn.dark{background:#111}
+  .amt{display:flex; flex-direction:column; gap:6px}
+  .amt .op{display:flex; justify-content:space-between; align-items:center;
+    border:1.5px solid #e6ded2; border-radius:8px; padding:8px 10px; font-size:11px; font-weight:700}
+  .amt .op.on{border-color:var(--brick); background:color-mix(in srgb,var(--brick) 8%,#fff); color:var(--brick)}
+  .amt .op .rd{width:13px; height:13px; border-radius:50%; border:2px solid #cbbfb0}
+  .amt .op.on .rd{border-color:var(--brick); background:var(--brick); box-shadow:0 0 0 2px #fff inset}
+  .pay-w{display:flex; flex-direction:column; gap:7px}
+  .pay-btn{border-radius:8px; padding:8px; text-align:center; font-weight:800; font-size:10px}
+  .pay-btn.apple{background:#000; color:#fff}
+  .pay-btn.gpay{background:#fff; color:#3c4043; border:1px solid #dadce0}
+  .or{display:flex; align-items:center; gap:8px; color:#b3a596; font-size:8.5px; font-weight:700}
+  .or::before,.or::after{content:""; flex:1; height:1px; background:#e6ded2}
+  .card-row{display:flex; gap:6px}
+  .card-row .fld{flex:1}
+  .done{display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; gap:9px; flex:1; padding:8px}
+  .done .chk{width:52px; height:52px; border-radius:50%; background:#3f7a4d; color:#fff;
+    display:grid; place-items:center; font-size:26px; font-weight:800}
+  .done h4{margin:0; font-size:13px; font-weight:800}
+  .done .ml{background:#fff; border:1px solid #e6ded2; border-radius:8px; padding:7px 9px;
+    font-size:9px; color:#8a7d70; width:100%}
+  .done .url{font-family:var(--mono); font-size:9px; color:#635bff; word-break:break-all}
+  .wall{flex:1; position:relative; overflow:hidden;
+    background-image:
+      linear-gradient(90deg, rgba(0,0,0,.22) 1px, transparent 1px),
+      linear-gradient(0deg, rgba(0,0,0,.22) 1px, transparent 1px),
+      linear-gradient(135deg,#b45a38,#8a3c22);
+    background-size:30px 14px,30px 14px,100% 100%}
+  .wall .gold{position:absolute; top:44%; left:32%; width:56px; height:12px;
+    background:linear-gradient(#ffe08a,#e8a13c); border-radius:2px;
+    box-shadow:0 0 14px 4px rgba(255,200,90,.8); display:grid; place-items:center;
+    font-size:7px; font-weight:800; color:#5a3b12}
+  .wall .hud{position:absolute; left:0; right:0; bottom:0; background:rgba(15,10,8,.72);
+    color:#fff; padding:7px 10px; font-size:9px; font-weight:700; display:flex;
+    align-items:center; gap:6px; backdrop-filter:blur(2px)}
+  .wall .find{position:absolute; top:8px; left:8px; right:8px; background:rgba(255,255,255,.92);
+    border-radius:8px; padding:6px 9px; font-size:9px; color:#8a7d70; font-weight:700;
+    display:flex; align-items:center; gap:6px}
+  @media(max-width:460px){.phone{width:190px}}
+
   /* theme toggle */
   .toggle{position:fixed; top:14px; right:14px; z-index:20;
     background:var(--card); border:1px solid var(--line); color:var(--ink-soft);
@@ -259,6 +379,19 @@
 </header>
 
 <div class="wrap">
+
+  <section id="target" style="padding-top:40px">
+    <figure class="photo" id="pumpFig">
+      <div class="ph-fallback">
+        <span>📷 ここに実物写真が入ります</span>
+        <span>画像を <code>asset/pump-room.jpg</code> に置くと表示されます</span>
+      </div>
+      <img src="asset/pump-room.jpg"
+           alt="遠賀川水源地ポンプ室（実物）"
+           onerror="document.getElementById('pumpFig').classList.add('noimg')">
+      <figcaption>再現する対象 ― 世界遺産「遠賀川水源地ポンプ室」（福岡県中間市）。この赤レンガの壁を3Dで再現し、寄付者の名前をレンガに刻む。</figcaption>
+    </figure>
+  </section>
 
   <!-- 1. 概要 / 2つの柱 -->
   <section id="model">
@@ -305,7 +438,7 @@
       <div class="layer">
         <div class="layer-label">③ 決済</div>
         <div class="nodes">
-          <div class="node stripe"><div class="nt">💳 Stripe Checkout <span class="badge b-stripe">Stripe</span></div><div class="nd">カード・Apple Pay・Google Pay。入力情報は metadata で添付。<b>決済だけを担当。</b></div></div>
+          <div class="node stripe"><div class="nt"><span class="stripe-mark">S</span> Stripe Checkout <span class="badge b-stripe">Stripe</span></div><div class="nd">カード・Apple Pay・Google Pay。入力情報は metadata で添付。<b>決済だけを担当。</b></div></div>
           <div class="node stripe"><div class="nt">🔔 Webhook <span class="badge b-stripe">Stripe→自前</span></div><div class="nd">「支払い成功」をサーバーへ通知。これが唯一のレンガ確定トリガー。</div></div>
         </div>
       </div>
@@ -329,43 +462,105 @@
   <!-- 3. 個人フロー -->
   <section id="personal">
     <h2><span class="num">03</span>個人フロー ― その場で即時決済</h2>
-    <p class="sub">市民は大画面のQRから、スマホで完結。<b>レンガが確定するのは「支払い成功」の後だけ</b>で、未払いフォームで刻印されることを防ぐ。</p>
-    <div class="pipe">
-      <div class="step">
-        <div class="idx">1</div>
-        <div class="body">
-          <h3>自前フォームで全情報を入力 <span class="who">自前サイト</span></h3>
-          <p>「個人として寄付」を選択。名前（ニックネーム可）・メッセージ30字・レンガの色4色・アイコンを入力し、3Dプレビューで設置イメージを確認。金額（¥500／¥1,000／¥5,000／任意）を選ぶ。</p>
-        </div>
+    <p class="sub">市民は大画面のQRから、スマホで完結。各ステップの画面イメージはこちら。<b>レンガが確定するのは「支払い成功」の後だけ</b>で、未払いフォームで刻印されることを防ぐ。</p>
+    <div class="gallery">
+
+      <!-- 1. 入力フォーム -->
+      <div class="shot">
+        <div class="phone"><div class="island"></div><div class="screen">
+          <div class="sbar"><span>9:41</span><span class="sig">📶 🔋</span></div>
+          <div class="shead">🧱 なかまの礎1910</div>
+          <div class="sbody">
+            <div class="tabs"><div class="tab on">個人として寄付</div><div class="tab">企業として応援</div></div>
+            <div class="fld"><div class="lb">お名前（ニックネーム可）</div><div class="bx">なかま太郎</div></div>
+            <div class="fld"><div class="lb">メッセージ（30字）</div><div class="bx">ずっと応援してます！</div></div>
+            <div class="fld"><div class="lb">レンガの色</div>
+              <div class="sw"><i class="on" style="background:#ac4126"></i><i style="background:#c98a3c"></i><i style="background:#4d6a55"></i><i style="background:#4b5a72"></i></div>
+            </div>
+            <div class="fld"><div class="lb">アイコン</div><div class="icns"><b class="on">🌸</b><b>⚽</b><b>🎸</b><b>🐾</b></div></div>
+            <div class="btn">3Dで確認する</div>
+          </div>
+        </div></div>
+        <div class="cap"><span class="st-num">1</span><h3>自前フォームで入力</h3>
+          <p>個人／企業を切替。名前・メッセージ・色4色・アイコンを入力。</p></div>
       </div>
-      <div class="step s-stripe">
-        <div class="idx">2</div>
-        <div class="body">
-          <h3>サーバーがStripe決済を作成 <span class="who">自前 → Stripe</span></h3>
-          <p>バックエンドが Checkout セッションを作成。<b>入力情報を metadata として決済に添付</b>し、支払い後に確実に取り出せるようにする。</p>
-        </div>
+
+      <!-- 2. 金額選択 -->
+      <div class="shot s-stripe">
+        <div class="phone"><div class="island"></div><div class="screen">
+          <div class="sbar"><span>9:41</span><span class="sig">📶 🔋</span></div>
+          <div class="shead">🧱 寄付金額をえらぶ</div>
+          <div class="sbody">
+            <div class="pv"><span>3Dプレビュー：あなたのレンガ</span></div>
+            <div class="amt">
+              <div class="op"><span>¥500</span><span class="rd"></span></div>
+              <div class="op on"><span>¥1,000</span><span class="rd"></span></div>
+              <div class="op"><span>¥5,000</span><span class="rd"></span></div>
+              <div class="op"><span>任意の金額</span><span class="rd"></span></div>
+            </div>
+            <div class="btn stripe">決済へすすむ →</div>
+          </div>
+        </div></div>
+        <div class="cap"><span class="st-num">2</span><h3>金額を選ぶ</h3>
+          <p>「決済へすすむ」でStripeへ。</p>
+          <span class="backend">裏側：サーバーがStripe決済を作成し、入力情報を metadata で添付</span></div>
       </div>
-      <div class="step s-stripe">
-        <div class="idx">3</div>
-        <div class="body">
-          <h3>ユーザーがStripeで支払う <span class="who">Stripe</span></h3>
-          <p>カード／Apple Pay／Google Pay で即時決済。決済画面はStripeがホストするので、カード情報は自前サーバーを通らない（PCI負担が軽い）。</p>
-        </div>
+
+      <!-- 3. Stripe決済 -->
+      <div class="shot s-stripe">
+        <div class="phone"><div class="island"></div><div class="screen">
+          <div class="sbar"><span>9:41</span><span class="sig">🔒 stripe</span></div>
+          <div class="shead stripe"><span class="stripe-mark">S</span> Stripe でお支払い</div>
+          <div class="sbody">
+            <div class="pay-w">
+              <div class="pay-btn apple"> Apple Pay</div>
+              <div class="pay-btn gpay">G Pay</div>
+            </div>
+            <div class="or">またはカード</div>
+            <div class="fld"><div class="lb">カード番号</div><div class="bx ph">1234 5678 9012 3456</div></div>
+            <div class="card-row">
+              <div class="fld"><div class="lb">有効期限</div><div class="bx ph">MM / YY</div></div>
+              <div class="fld"><div class="lb">CVC</div><div class="bx ph">123</div></div>
+            </div>
+            <div class="btn stripe">¥1,000 を支払う</div>
+          </div>
+        </div></div>
+        <div class="cap"><span class="st-num">3</span><h3>Stripeで支払う</h3>
+          <p>カード / Apple Pay / Google Pay。カード情報は自前サーバーを通らない。</p></div>
       </div>
-      <div class="step s-stripe">
-        <div class="idx">4</div>
-        <div class="body">
-          <h3>決済成功のWebhook → DBに保存 <span class="who">Stripe → 自前DB</span></h3>
-          <p>Stripeが「支払い成功」をWebhookで通知。サーバーは metadata を読み、<b>「寄付者＋レンガ」をDBに保存</b>。ここが唯一の刻印確定ポイント。完了メールと“自分のレンガの専用URL”を送信。</p>
-        </div>
+
+      <!-- 4. 完了 -->
+      <div class="shot s-stripe">
+        <div class="phone"><div class="island"></div><div class="screen">
+          <div class="sbar"><span>9:41</span><span class="sig">📶 🔋</span></div>
+          <div class="shead">🧱 お支払い完了</div>
+          <div class="done">
+            <div class="chk">✓</div>
+            <h4>ありがとうございました！</h4>
+            <div class="ml">📧 確認メールを送信しました</div>
+            <div class="ml">あなたのレンガ専用URL<br><span class="url">nakama1910.jp/b/A1B2C3</span></div>
+            <div class="btn" style="width:100%">あなたのレンガを見る</div>
+          </div>
+        </div></div>
+        <div class="cap"><span class="st-num">4</span><h3>完了・メール受信</h3>
+          <p>完了メールと“自分のレンガの専用URL”が届く。</p>
+          <span class="backend">裏側：決済成功のWebhook → DBに「寄付者＋レンガ」を保存（唯一の刻印確定点）</span></div>
       </div>
-      <div class="step s-3d">
-        <div class="idx">5</div>
-        <div class="body">
-          <h3>3Dサイトが bricks.json を読み込んで刻印 <span class="who">3D空間</span></h3>
-          <p>DBから生成された bricks.json を3Dサイトが読み込み、ポンプ室の壁に名入りレンガを配置。大画面・スマホから“いつでも会いに行ける”。記念15秒動画も自動生成。</p>
-        </div>
+
+      <!-- 5. 3D空間 -->
+      <div class="shot s-3d">
+        <div class="phone"><div class="island"></div><div class="screen">
+          <div class="sbar"><span>9:41</span><span class="sig">📶 🔋</span></div>
+          <div class="wall">
+            <div class="find">🔍 「なかま太郎」を検索中…</div>
+            <div class="gold">なかま太郎</div>
+            <div class="hud">🏛️ ポンプ室の壁 ／ あなたのレンガが光っています</div>
+          </div>
+        </div></div>
+        <div class="cap"><span class="st-num">5</span><h3>3D空間で刻印</h3>
+          <p>3Dサイトが bricks.json を読み込み、壁に名入りレンガを配置。記念15秒動画も自動生成。</p></div>
       </div>
+
     </div>
   </section>
 
