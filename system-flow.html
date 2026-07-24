@@ -347,6 +347,144 @@
     display:flex; align-items:center; gap:6px}
   @media(max-width:460px){.phone{width:190px}}
 
+  /* ---- 02 data flow diagram ---- */
+  .fd{display:flex; align-items:center; gap:2px; overflow-x:auto; padding:20px 4px 8px;
+    border:1px solid var(--line); border-radius:var(--radius); background:var(--card);
+    box-shadow:var(--shadow); margin-bottom:22px}
+  .fd-node{flex:0 0 auto; width:132px; text-align:center; display:flex; flex-direction:column;
+    align-items:center; gap:1px; padding:6px 4px; color:var(--ink)}
+  .fd-node .art{width:66px; height:52px; display:block; margin:0 auto 8px}
+  .fd-node b{font-size:.86rem; line-height:1.3}
+  .fd-node small{font-size:.7rem; color:var(--ink-soft); line-height:1.35}
+  .fd-node.own{color:var(--brick)} .fd-node.stripe{color:#635bff} .fd-node.d3{color:var(--slate)}
+  .fd-node.own b,.fd-node.stripe b,.fd-node.d3 b{color:var(--ink)}
+  .fd-arrow{flex:0 0 auto; width:66px; display:flex; flex-direction:column; align-items:center;
+    gap:3px; color:var(--brick)}
+  .fd-arrow .ln{font-size:1.5rem; line-height:1}
+  .fd-arrow small{font-size:.63rem; font-weight:700; color:var(--ink-soft); text-align:center; line-height:1.2}
+
+  /* ---- 03 kiosk (big monitor + QR + scanning phone) ---- */
+  .kiosk{border:1px solid var(--line); border-radius:var(--radius);
+    background:linear-gradient(180deg, color-mix(in srgb,var(--slate) 9%,var(--card)), var(--card));
+    box-shadow:var(--shadow); padding:28px 20px 22px; margin-bottom:28px}
+  .kscene{display:flex; align-items:flex-end; justify-content:center; gap:clamp(16px,5vw,46px); flex-wrap:wrap}
+  .monitor{width:min(420px,74%); flex:0 1 auto}
+  .mscreen{aspect-ratio:16/10; border:7px solid #1b1613; border-radius:9px; position:relative;
+    overflow:hidden; box-shadow:0 16px 34px rgba(0,0,0,.3);
+    background:
+      linear-gradient(90deg,rgba(0,0,0,.16) 1px,transparent 1px),
+      linear-gradient(0deg,rgba(0,0,0,.16) 1px,transparent 1px),
+      linear-gradient(180deg,#9fc6e8 0 34%, #bb5f3c 34% 100%);
+    background-size:32px 15px,32px 15px,100% 100%}
+  .mscreen .mlabel{position:absolute; top:9px; left:10px; background:rgba(15,10,8,.6); color:#fff;
+    font-size:9px; font-weight:700; padding:3px 8px; border-radius:5px}
+  .mscreen .qr{position:absolute; right:13px; bottom:13px; background:#fff; border-radius:8px;
+    padding:6px 6px 4px; display:flex; flex-direction:column; align-items:center; gap:2px;
+    box-shadow:0 5px 16px rgba(0,0,0,.35)}
+  .mscreen .qr svg{width:56px; height:56px; display:block}
+  .mscreen .qr small{font-size:7.5px; font-weight:800; color:#111}
+  .mstand{width:20px; height:16px; background:#2c2621; margin:0 auto}
+  .mfoot{width:88px; height:11px; background:#241f1b; border-radius:0 0 8px 8px; margin:0 auto}
+  .scanphone{display:flex; flex-direction:column; align-items:center; gap:9px; padding-bottom:6px}
+  .sp-body{width:66px; height:128px; background:#0c0a09; border-radius:15px; padding:5px;
+    transform:rotate(-6deg); box-shadow:0 14px 28px rgba(0,0,0,.32)}
+  .sp-scr{width:100%; height:100%; border-radius:11px; background:linear-gradient(#201914,#38302a);
+    display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden}
+  .sp-frame{width:40px; height:40px; border:2px solid rgba(255,255,255,.85); border-radius:7px; position:relative}
+  .sp-line{position:absolute; left:2px; right:2px; top:2px; height:2px; background:#4ade80;
+    box-shadow:0 0 9px 1px #4ade80}
+  .scanphone .lbl{font-size:.8rem; font-weight:700; color:var(--ink); text-align:center}
+  .scanphone .lbl span{display:block; font-weight:400; color:var(--ink-soft); font-size:.74rem}
+  .kcap{margin-top:18px; text-align:center; font-weight:700; font-size:.92rem}
+  .kcap span{display:block; font-weight:400; color:var(--ink-soft); font-size:.82rem; margin-top:3px}
+
+  /* ---- desktop window mockup (company) ---- */
+  .gallery.wide{grid-template-columns:repeat(auto-fit,minmax(272px,1fr))}
+  .gallery.wide .shot{align-items:stretch}
+  .gallery.wide .cap{max-width:none}
+  .win{width:100%; border-radius:11px; overflow:hidden; border:1px solid var(--line);
+    box-shadow:var(--shadow); background:#faf7f2; color:#241c16; font-size:11px; line-height:1.45}
+  .win .wbar{background:#e7ded1; padding:8px 11px; display:flex; align-items:center; gap:9px}
+  .win .wdots{display:flex; gap:5px}
+  .win .wdots i{width:9px; height:9px; border-radius:50%; display:block}
+  .win .waddr{flex:1; background:#fff; border-radius:6px; padding:4px 9px; font-size:9px;
+    color:#8a7d70; font-family:var(--mono); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .win .wbody{padding:13px 15px; display:flex; flex-direction:column; gap:9px}
+  .win .fld .bx.up{border-style:dashed; text-align:center; color:#b3a596}
+  .win .btn{margin-top:2px}
+  .rev{display:flex; align-items:center; gap:9px; border:1px solid #e6ded2; border-radius:8px;
+    padding:9px 10px; background:#fff}
+  .rev .logo{width:30px; height:30px; border-radius:6px; background:linear-gradient(135deg,#635bff,#3f37c9);
+    display:grid; place-items:center; color:#fff; font-weight:800; font-size:13px; flex:none}
+  .rev .nm{flex:1} .rev .nm b{font-size:11px} .rev .nm small{display:block; color:#8a7d70; font-size:9px}
+  .rev-btns{display:flex; gap:6px}
+  .mini-btn{font-size:9.5px; font-weight:800; padding:6px 10px; border-radius:7px}
+  .mini-btn.ok{background:#3f7a4d; color:#fff} .mini-btn.ng{background:#efe7db; color:#8a7d70}
+  .inv{display:flex; flex-direction:column; gap:7px}
+  .inv .row{display:flex; justify-content:space-between; font-size:10.5px}
+  .inv .row.tot{border-top:1px solid #e6ded2; padding-top:7px; font-weight:800; font-size:12px}
+  .inv .stat{align-self:flex-start; font-size:9px; font-weight:800; color:#9a6212;
+    background:#f7ecd4; border-radius:20px; padding:3px 9px}
+
+  /* ---- metaverse scene (company placement) ---- */
+  .scene{width:100%; aspect-ratio:4/3; border-radius:11px; overflow:hidden; position:relative;
+    border:1px solid var(--line); box-shadow:var(--shadow);
+    background:
+      linear-gradient(90deg,rgba(0,0,0,.14) 1px,transparent 1px),
+      linear-gradient(0deg,rgba(0,0,0,.14) 1px,transparent 1px),
+      linear-gradient(180deg,#9fc6e8 0 30%, #b45a38 30% 100%);
+    background-size:28px 13px,28px 13px,100% 100%}
+  .scene .stag{position:absolute; top:9px; left:9px; background:rgba(15,10,8,.6); color:#fff;
+    font-size:9px; font-weight:700; padding:3px 8px; border-radius:5px}
+  .scene .cm{position:absolute; top:36%; left:9%; width:44%; aspect-ratio:16/9;
+    background:linear-gradient(135deg,#1f2937,#0f172a); border:3px solid #d9c9a8; border-radius:4px;
+    display:grid; place-items:center; text-align:center; color:#fff; font-weight:800; font-size:12px;
+    box-shadow:0 7px 18px rgba(0,0,0,.35)}
+  .scene .cm small{display:block; font-weight:600; font-size:8px; opacity:.85; margin-top:3px}
+  .scene .plate{position:absolute; bottom:15%; right:9%; background:linear-gradient(#e0c268,#b8912f);
+    color:#3a2c0a; font-weight:800; font-size:10px; padding:7px 12px; border-radius:3px; text-align:center;
+    box-shadow:0 5px 12px rgba(0,0,0,.32)}
+  .scene .plate small{display:block; font-weight:600; font-size:7.5px; opacity:.8}
+
+  /* ---- step5 演出 animation & ribbon ---- */
+  .playtag{position:absolute; top:15px; right:13px; z-index:5; background:rgba(15,10,8,.72);
+    color:#fff; font-size:8px; font-weight:800; padding:3px 8px; border-radius:20px}
+  @media (prefers-reduced-motion:no-preference){
+    .shot.s-3d .wall{animation:flywall 7s ease-in-out infinite alternate}
+    .shot.s-3d .wall .gold{animation:goldglow 2.2s ease-in-out infinite}
+    .sp-line{animation:scanline 1.4s ease-in-out infinite alternate}
+    .mscreen .qr{animation:qrpulse 2.4s ease-in-out infinite}
+  }
+  @keyframes flywall{0%{background-size:30px 14px,30px 14px,100% 100%}
+    100%{background-size:46px 21px,46px 21px,150% 150%}}
+  @keyframes goldglow{0%,100%{box-shadow:0 0 10px 3px rgba(255,200,90,.55)}
+    50%{box-shadow:0 0 22px 8px rgba(255,200,90,1)}}
+  @keyframes scanline{0%{top:3px}100%{top:33px}}
+  @keyframes qrpulse{0%,100%{box-shadow:0 5px 16px rgba(0,0,0,.35)}
+    50%{box-shadow:0 5px 16px rgba(0,0,0,.35), 0 0 0 5px rgba(74,222,128,.5)}}
+
+  /* ---- 07 ideal architecture ---- */
+  .arch{border:1px solid var(--line); border-radius:var(--radius); background:var(--card);
+    box-shadow:var(--shadow); padding:10px 18px 18px; overflow-x:auto; margin-bottom:22px}
+  .arow{padding:15px 0}
+  .arow + .arow{border-top:1px dashed var(--line)}
+  .al-label{font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; font-weight:700;
+    color:var(--ink-soft); margin-bottom:10px}
+  .al-nodes{display:flex; gap:12px; flex-wrap:wrap}
+  .anode{flex:1; min-width:158px; background:var(--card-2); border:1px solid var(--line);
+    border-radius:10px; padding:12px 14px}
+  .anode .an-t{font-weight:800; font-size:.92rem; display:flex; align-items:center; gap:8px}
+  .anode .an-d{font-size:.78rem; color:var(--ink-soft); margin-top:4px; line-height:1.55}
+  .anode.stripe-n{border-color:color-mix(in srgb,#635bff 45%,var(--line))}
+  .anode.stripe-n .an-t{color:#635bff}
+  .anode.host-n{border-color:color-mix(in srgb,var(--slate) 48%,var(--line))}
+  .anode.host-n .an-t{color:var(--slate)}
+  .anode.own-n{border-color:color-mix(in srgb,var(--brick) 45%,var(--line))}
+  .anode.own-n .an-t{color:var(--brick)}
+  .adown{text-align:center; color:var(--brick); font-weight:700; font-size:.72rem; letter-spacing:.05em;
+    display:flex; align-items:center; gap:8px; justify-content:center}
+  .adown::before,.adown::after{content:""; height:1px; width:40px; background:var(--line)}
+
   /* theme toggle */
   .toggle{position:fixed; top:14px; right:14px; z-index:20;
     background:var(--card); border:1px solid var(--line); color:var(--ink-soft);
@@ -420,6 +558,58 @@
       <span class="badge b-own">自前で作る</span>
       <span class="badge b-stripe">Stripe</span>
       <span class="badge b-3d">3D（既存app.js）</span></p>
+
+    <div class="fd">
+      <div class="fd-node">
+        <svg class="art" viewBox="0 0 72 56" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" aria-hidden="true">
+          <rect x="5" y="6" width="44" height="30" rx="3"/>
+          <rect x="11" y="12" width="32" height="18" rx="1.5" fill="currentColor" stroke="none" opacity=".16"/>
+          <path d="M20 42h16M28 36v6"/>
+          <rect x="52" y="22" width="16" height="27" rx="3.5"/>
+          <circle cx="60" cy="44" r="1.4" fill="currentColor" stroke="none"/>
+        </svg>
+        <b>訪問者</b><small>大画面・スマホ</small>
+      </div>
+      <div class="fd-arrow"><span class="ln">→</span><small>入力</small></div>
+      <div class="fd-node own">
+        <svg class="art" viewBox="0 0 64 56" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" aria-hidden="true">
+          <rect x="15" y="5" width="34" height="46" rx="3.5"/>
+          <path d="M22 18h20M22 26h20M22 34h14"/>
+          <rect x="22" y="40" width="20" height="6" rx="2" fill="currentColor" stroke="none" opacity=".28"/>
+        </svg>
+        <b>自前サイト</b><small>フォーム＋API</small>
+      </div>
+      <div class="fd-arrow"><span class="ln">→</span><small>metadata<br>添付</small></div>
+      <div class="fd-node stripe">
+        <svg class="art" viewBox="0 0 64 56" aria-hidden="true">
+          <rect x="16" y="8" width="32" height="40" rx="7" fill="#635bff"/>
+          <text x="32" y="36" text-anchor="middle" font-size="28" font-weight="800" fill="#fff" font-family="sans-serif">S</text>
+        </svg>
+        <b>Stripe</b><small>決済</small>
+      </div>
+      <div class="fd-arrow"><span class="ln">→</span><small>Webhook</small></div>
+      <div class="fd-node own">
+        <svg class="art" viewBox="0 0 64 56" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true">
+          <ellipse cx="32" cy="14" rx="17" ry="6"/>
+          <path d="M15 14v28c0 3.3 7.6 6 17 6s17-2.7 17-6V14"/>
+          <path d="M15 28c0 3.3 7.6 6 17 6s17-2.7 17-6"/>
+        </svg>
+        <b>DB → bricks.json</b><small>寄付者＋レンガ</small>
+      </div>
+      <div class="fd-arrow"><span class="ln">→</span><small>読込</small></div>
+      <div class="fd-node d3">
+        <svg class="art" viewBox="0 0 64 56" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 26 32 8l24 18"/>
+          <path d="M13 26v22h38V26"/>
+          <circle cx="32" cy="20" r="3.5"/>
+          <rect x="18" y="33" width="9" height="6" fill="currentColor" stroke="none" opacity=".3"/>
+          <rect x="30" y="33" width="9" height="6" fill="currentColor" stroke="none" opacity=".55"/>
+          <rect x="24" y="41" width="9" height="6" fill="currentColor" stroke="none" opacity=".3"/>
+        </svg>
+        <b>3D空間</b><small>壁に刻印</small>
+      </div>
+    </div>
+
     <div class="map">
       <div class="layer">
         <div class="layer-label">① 訪問者</div>
@@ -463,6 +653,36 @@
   <section id="personal">
     <h2><span class="num">03</span>個人フロー ― その場で即時決済</h2>
     <p class="sub">市民は大画面のQRから、スマホで完結。各ステップの画面イメージはこちら。<b>レンガが確定するのは「支払い成功」の後だけ</b>で、未払いフォームで刻印されることを防ぐ。</p>
+
+    <div class="kiosk">
+      <div class="kscene">
+        <div class="monitor">
+          <div class="mscreen">
+            <span class="mlabel">🏛️ 遠賀川水源地ポンプ室 3D</span>
+            <div class="qr">
+              <svg viewBox="0 0 29 29" shape-rendering="crispEdges" aria-hidden="true">
+                <rect width="29" height="29" fill="#fff"/>
+                <path fill="#111" d="M0 0h7v7H0zM2 2v3h3V2zM22 0h7v7h-7zM24 2v3h3V2zM0 22h7v7H0zM2 24v3h3v-3z"/>
+                <path fill="#111" d="M9 0h2v2H9zM13 0h2v4h-2zM17 2h2v2h-2zM9 4h2v2H9zM11 6h3v2h-3zM16 6h2v2h-2zM20 6h2v2h-2z"/>
+                <path fill="#111" d="M0 9h2v2H0zM4 9h3v2H4zM9 9h2v2H9zM13 9h4v2h-4zM19 9h2v2h-2zM23 9h2v2h-2zM27 9h2v2h-2z"/>
+                <path fill="#111" d="M2 13h2v3H2zM6 13h3v2H6zM11 13h2v2h-2zM15 13h3v2h-3zM20 13h2v3h-2zM24 13h3v2h-3z"/>
+                <path fill="#111" d="M0 17h2v2H0zM5 17h2v2H5zM9 18h3v2H9zM14 17h2v3h-2zM18 17h3v2h-3zM23 17h2v2h-2zM27 17h2v2h-2z"/>
+                <path fill="#111" d="M9 22h2v2H9zM13 22h4v2h-4zM19 22h3v2h-3zM24 22h3v2h-3zM11 26h3v2h-3zM16 26h2v2h-2zM20 26h4v2h-4z"/>
+              </svg>
+              <small>スマホで読み取り</small>
+            </div>
+          </div>
+          <div class="mstand"></div>
+          <div class="mfoot"></div>
+        </div>
+        <div class="scanphone">
+          <div class="sp-body"><div class="sp-scr"><div class="sp-frame"><div class="sp-line"></div></div></div></div>
+          <div class="lbl">📷 QRをかざす<span>その場で寄付へ</span></div>
+        </div>
+      </div>
+      <p class="kcap">大画面モニターのQRを、スマホでかざして読み取る<span>アプリのDL・ログインは不要。QRからそのまま寄付フォームへ。</span></p>
+    </div>
+
     <div class="gallery">
 
       <!-- 1. 入力フォーム -->
@@ -549,7 +769,7 @@
 
       <!-- 5. 3D空間 -->
       <div class="shot s-3d">
-        <div class="phone"><div class="island"></div><div class="screen">
+        <div class="phone"><div class="island"></div><div class="playtag">▶ 演出（自動再生）</div><div class="screen">
           <div class="sbar"><span>9:41</span><span class="sig">📶 🔋</span></div>
           <div class="wall">
             <div class="find">🔍 「なかま太郎」を検索中…</div>
@@ -557,8 +777,8 @@
             <div class="hud">🏛️ ポンプ室の壁 ／ あなたのレンガが光っています</div>
           </div>
         </div></div>
-        <div class="cap"><span class="st-num">5</span><h3>3D空間で刻印</h3>
-          <p>3Dサイトが bricks.json を読み込み、壁に名入りレンガを配置。記念15秒動画も自動生成。</p></div>
+        <div class="cap"><span class="st-num">5</span><h3>3D空間で刻印（演出つき）</h3>
+          <p>壁へ飛び込み、自分のレンガが金色に輝く演出。<b>記念15秒動画（MP4）が自動生成</b>され、SNSでシェアできる。<br>※上の画面はループ演出のプレビュー。</p></div>
       </div>
 
     </div>
@@ -567,36 +787,77 @@
   <!-- 4. 企業フロー -->
   <section id="company">
     <h2><span class="num">04</span>企業フロー ― 申込 → 審査 → 後日掲載</h2>
-    <p class="sub">企業は即時決済ではなく、<b>審査と請求を挟む</b>。掲載可否は市が最終判断。通常3営業日以内に担当から連絡。</p>
-    <div class="pipe">
-      <div class="step">
-        <div class="idx">1</div>
-        <div class="body">
-          <h3>申込フォーム入力 <span class="who">自前サイト</span></h3>
-          <p>「企業として応援」を選択。会社名・担当・メール・電話・希望プラン、掲載内容（業種・設立年・URL・ロゴ・紹介文100字・動画URL）を入力し確定。</p>
+    <p class="sub">企業は即時決済ではなく、<b>審査と請求を挟む</b>。掲載可否は市が最終判断。通常3営業日以内に担当から連絡。各ステップの画面イメージはこちら。</p>
+    <div class="gallery wide">
+
+      <!-- 1. 申込フォーム -->
+      <div class="shot">
+        <div class="win">
+          <div class="wbar"><div class="wdots"><i style="background:#e8695f"></i><i style="background:#f4be4f"></i><i style="background:#61c554"></i></div>
+            <div class="waddr">nakama1910.jp/sponsor</div></div>
+          <div class="wbody">
+            <div class="tabs"><div class="tab">個人として寄付</div><div class="tab on">企業として応援</div></div>
+            <div class="fld"><div class="lb">会社名</div><div class="bx">株式会社エグゼメイト</div></div>
+            <div class="fld"><div class="lb">希望プラン</div><div class="bx">シルバー（¥300,000〜） ▾</div></div>
+            <div class="fld"><div class="lb">ロゴ画像</div><div class="bx up">＋ ロゴをアップロード</div></div>
+            <div class="fld"><div class="lb">紹介動画URL</div><div class="bx ph">https://…</div></div>
+            <div class="btn">申込を確定する</div>
+          </div>
         </div>
+        <div class="cap"><span class="st-num">1</span><h3>申込フォーム入力</h3>
+          <p>会社名・担当・希望プラン・ロゴ・動画URL・紹介文100字などを入力。</p></div>
       </div>
-      <div class="step">
-        <div class="idx">2</div>
-        <div class="body">
-          <h3>内容確認・審査 <span class="who">中間市</span></h3>
-          <p>市の広告掲載基準（公序良俗・業種除外等）に沿って市が承認。</p>
+
+      <!-- 2. 審査 -->
+      <div class="shot">
+        <div class="win">
+          <div class="wbar"><div class="wdots"><i style="background:#e8695f"></i><i style="background:#f4be4f"></i><i style="background:#61c554"></i></div>
+            <div class="waddr">admin.nakama1910.jp/review</div></div>
+          <div class="wbody">
+            <div class="fld"><div class="lb">審査待ちの申込（中間市 管理画面）</div></div>
+            <div class="rev">
+              <div class="logo">E</div>
+              <div class="nm"><b>株式会社エグゼメイト</b><small>シルバー ・ 業種：IT</small></div>
+            </div>
+            <div class="rev-btns"><div class="mini-btn ok">✓ 承認</div><div class="mini-btn ng">却下</div></div>
+            <p style="font-size:9.5px;color:#8a7d70;margin:2px 0 0">市の広告掲載基準（公序良俗・業種除外等）に沿って市が承認。</p>
+          </div>
         </div>
+        <div class="cap"><span class="st-num">2</span><h3>内容確認・審査</h3>
+          <p>市が掲載基準に沿って承認／却下。掲載可否は市が最終判断。</p></div>
       </div>
-      <div class="step s-stripe">
-        <div class="idx">3</div>
-        <div class="body">
-          <h3>見積・請求 <span class="who">Stripe Invoice 等</span></h3>
-          <p>契約締結・請求書発行。Stripeの請求書（Invoice）機能や銀行振込で入金を受ける（決済方式は要確認事項）。</p>
+
+      <!-- 3. 見積・請求 -->
+      <div class="shot s-stripe">
+        <div class="win">
+          <div class="wbar"><div class="wdots"><i style="background:#e8695f"></i><i style="background:#f4be4f"></i><i style="background:#61c554"></i></div>
+            <div class="waddr">🔒 stripe.com/invoice</div></div>
+          <div class="wbody">
+            <div class="fld"><div class="lb" style="display:flex;align-items:center;gap:6px"><span class="stripe-mark">S</span> 請求書 INV-0001</div></div>
+            <div class="inv">
+              <div class="row"><span>シルバープラン 掲載料</span><span>¥300,000</span></div>
+              <div class="row"><span>消費税（10%）</span><span>¥30,000</span></div>
+              <div class="row tot"><span>合計</span><span>¥330,000</span></div>
+              <span class="stat">● 支払い待ち</span>
+            </div>
+            <div class="btn stripe">請求書を送信する</div>
+          </div>
         </div>
+        <div class="cap"><span class="st-num">3</span><h3>見積・請求</h3>
+          <p>契約締結後、Stripe Invoice（請求書）や銀行振込で入金（方式は要確認）。</p></div>
       </div>
-      <div class="step s-3d">
-        <div class="idx">4</div>
-        <div class="body">
-          <h3>入金確認後に掲載・公開 <span class="who">3D空間 ＆ Web</span></h3>
-          <p>入金確認後、メタバース空間とWebサイトにロゴ・銘板・CM動画を掲載。差し替えは管理画面から申請→承認。</p>
+
+      <!-- 4. 掲載 -->
+      <div class="shot s-3d">
+        <div class="scene">
+          <span class="stag">🏛️ メタバース空間 ＆ Webサイト</span>
+          <div class="cm">CM動画<small>15秒 自社紹介</small></div>
+          <div class="plate">株式会社エグゼメイト<small>SILVER スポンサー</small></div>
         </div>
+        <div class="cap"><span class="st-num">4</span><h3>入金確認後に掲載</h3>
+          <p>空間内にロゴ・銘板・CM動画を掲出。差し替えは管理画面から申請→承認。</p></div>
       </div>
+
     </div>
   </section>
 
@@ -645,9 +906,62 @@
     <p class="note">※ ブロンズ金額は資料内で「5万円」と「10万円」の記述ゆれあり（要確認）。常設アーカイブは永続、目立つ“特等席”表示のみプランごとの期間制（例：90日）。</p>
   </section>
 
-  <!-- 7. 要確認 -->
+  <!-- 7. 理想のシステム構成 -->
+  <section id="stack">
+    <h2><span class="num">07</span>理想のシステム構成（技術の選び方）</h2>
+    <p class="sub">「一番<b>管理がしやすい</b>」を最優先にした理想構成。<b>自前サーバーを持たない（サーバーレス）</b>ことで運用の手間を最小化し、決済・DB・メールは実績あるマネージドサービスに任せる。現状ではなく“これから作るなら”の推奨。</p>
+
+    <div class="arch">
+      <div class="arow">
+        <div class="al-label">① 利用者（クライアント）</div>
+        <div class="al-nodes">
+          <div class="anode"><div class="an-t">📺 大画面モニター</div><div class="an-d">据え置きの主役。3D空間・名前検索・寄付導線をブラウザで表示。</div></div>
+          <div class="anode"><div class="an-t">📱 スマートフォン</div><div class="an-d">QRから寄付フォーム、記念動画のSNSシェア。アプリDL不要。</div></div>
+        </div>
+      </div>
+      <div class="adown">HTTPS でアクセス</div>
+      <div class="arow">
+        <div class="al-label">② フロント＋API ＝ ここを1つのコードベースで作る</div>
+        <div class="al-nodes">
+          <div class="anode host-n"><div class="an-t">▲ Vercel</div><div class="an-d">ホスティング＋サーバーレス関数。サーバー保守ゼロ・自動スケール・従量課金。</div></div>
+          <div class="anode own-n"><div class="an-t">⬢ Next.js / React</div><div class="an-d">3Dサイト（Three.js）＋寄付フォームを同じ枠組みで。言語は <b>TypeScript</b>。</div></div>
+          <div class="anode own-n"><div class="an-t">⚙ API Routes</div><div class="an-d">決済セッション作成・Webhook受信・bricks.json 配信をサーバーレス関数で。</div></div>
+        </div>
+      </div>
+      <div class="adown">各サービスとAPI連携</div>
+      <div class="arow">
+        <div class="al-label">③ 外部サービス（マネージド ＝ お任せ）</div>
+        <div class="al-nodes">
+          <div class="anode stripe-n"><div class="an-t"><span class="stripe-mark">S</span> Stripe</div><div class="an-d">決済。個人＝Checkout（即時）／企業＝Invoice（請求書）。カード情報・PCIはStripe側。</div></div>
+          <div class="anode host-n"><div class="an-t">⛁ Supabase</div><div class="an-d">DB（PostgreSQL）＋画像/動画ストレージ＋<b>管理画面つき</b>。市の担当者がGUIで非表示操作も可能。</div></div>
+          <div class="anode"><div class="an-t">✉ Resend</div><div class="an-d">完了メール・専用URLの自動送信。</div></div>
+          <div class="anode"><div class="an-t">🛡 AIモデレーション</div><div class="an-d">不適切語・個人情報・なりすましの自動検知（投稿の即時公開を安全に）。</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>役割</th><th>おすすめ</th><th>なぜ管理しやすいか</th></tr></thead>
+        <tbody>
+          <tr><td>言語</td><td>TypeScript</td><td>フロントもAPIも同じ言語。型があり事故が減る。</td></tr>
+          <tr><td>フレームワーク</td><td>Next.js（React）</td><td>サイト・フォーム・APIを1つのプロジェクトで完結。3DのThree.jsもそのまま同居。</td></tr>
+          <tr><td>ホスティング/実行</td><td>Vercel</td><td>Gitにpushすれば自動デプロイ。サーバー管理・スケール調整が不要。</td></tr>
+          <tr><td>決済</td><td>Stripe</td><td>カード/Apple Pay/Google Pay・請求書まで対応。PCI対応を任せられる。</td></tr>
+          <tr><td>データベース</td><td>Supabase（PostgreSQL）</td><td>管理画面つきで、市の担当者も表計算感覚で閲覧・非表示ができる。</td></tr>
+          <tr><td>ファイル保管</td><td>Supabase Storage</td><td>企業ロゴ・CM動画をDBと同じ基盤で管理。</td></tr>
+          <tr><td>メール送信</td><td>Resend</td><td>完了メール・専用URLをコード数行で送れる。</td></tr>
+          <tr><td>3D表示</td><td>Three.js</td><td><b>現行資産をそのまま活用</b>。bricks.json を読む形に接続するだけ。</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note"><b>この構成のうれしさ：</b>①運用するサーバーが無い（壊れる・監視する対象が減る）②コードが1か所にまとまる③決済・DB・メールはプロに任せる④市の担当者は管理画面から操作できる。<br>
+      現行のThree.js（本リポジトリ）は捨てずに、この構成の「3D表示」部分としてそのまま活かせる。</p>
+  </section>
+
+  <!-- 8. 要確認 -->
   <section id="todo">
-    <h2><span class="num">07</span>着手前に確定すべきこと</h2>
+    <h2><span class="num">08</span>着手前に確定すべきこと</h2>
     <p class="sub">開発を始める前に、特に決済まわりで詰めておきたい論点。</p>
     <div class="checks">
       <div class="check"><div class="mk">!</div><div><h3>決済アカウントの名義</h3><p>中間市（市／受け皿団体が加盟店）か、EXEMATEの収納代行か。手数料と市への精算方法も。→ 市 出納・財政／税理士</p></div></div>
