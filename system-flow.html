@@ -508,6 +508,23 @@
   .zarrow::before{content:"↓"; font-size:1.35rem; color:var(--brick); line-height:1}
   .zone .shot.wide{width:min(330px,100%)}
 
+  /* ---- reflection timing block ---- */
+  .timing{margin-top:22px; border:1px solid color-mix(in srgb,var(--slate) 40%,var(--line));
+    background:color-mix(in srgb,var(--slate) 6%,var(--card)); border-radius:var(--radius);
+    padding:22px 24px; box-shadow:var(--shadow)}
+  .timing > h3{color:var(--slate); font-size:1.06rem; margin-bottom:8px}
+  .timing > p{font-size:.94rem; margin:0 0 16px; max-width:var(--maxtext)}
+  .topts{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px}
+  .topt{background:var(--card); border:1px solid var(--line); border-radius:11px; padding:14px 16px}
+  .topt.reco{border-color:color-mix(in srgb,var(--slate) 45%,var(--line))}
+  .topt .tt{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-weight:800;
+    font-size:.94rem; margin-bottom:5px}
+  .topt .tt em{font-style:normal; font-size:.66rem; font-weight:800; letter-spacing:.04em;
+    color:#fff; background:var(--slate); border-radius:20px; padding:.15em .6em}
+  .topt p{font-size:.84rem; color:var(--ink-soft); margin:0}
+  .tnote{margin:16px 0 0 !important; font-size:.88rem; padding:12px 14px;
+    background:color-mix(in srgb,var(--slate) 8%,transparent); border-radius:9px}
+
   /* theme toggle */
   .toggle{position:fixed; top:14px; right:14px; z-index:20;
     background:var(--card); border:1px solid var(--line); color:var(--ink-soft);
@@ -808,30 +825,29 @@
       </div>
 
       </div></div>
-
-      <div class="zarrow"><b>3D空間へ</b></div>
-
-      <div class="zone d3"><span class="zlabel">🏛️ 3D空間（既存Three.js）</span>
-      <div class="zrow">
-
-      <!-- 5. 3D空間 -->
-      <div class="shot s-3d">
-        <div class="phone"><div class="island"></div><div class="playtag">▶ 演出（自動再生）</div><div class="screen">
-          <div class="sbar"><span>9:41</span><span class="sig">📶 🔋</span></div>
-          <div class="wall">
-            <div class="find">🔍 「なかま太郎」を検索中…</div>
-            <div class="gold">なかま太郎</div>
-            <div class="hud">🏛️ ポンプ室の壁 ／ あなたのレンガが光っています</div>
-          </div>
-        </div></div>
-        <div class="cap"><span class="st-num">5</span><h3>3D空間で刻印（演出つき）</h3>
-          <p>壁へ飛び込み、自分のレンガが金色に輝く演出。<b>記念15秒動画（MP4）が自動生成</b>され、SNSでシェアできる。<br>※上の画面はループ演出のプレビュー。</p></div>
-      </div>
-
-      </div></div>
     </div>
 
-    <p class="note"><b>色枠の見かた：</b><span style="color:var(--brick);font-weight:700">🧱 自前サイト</span>＝自分たちで作るページ／<span style="color:#635bff;font-weight:700">S Stripe</span>＝決済だけ任せる／<span style="color:var(--slate);font-weight:700">🏛️ 3D空間</span>＝既存Three.js。Stripeは中央の「決済のみ」で、その前後はすべて自前サイトが担う。</p>
+    <p class="note"><b>色枠の見かた：</b><span style="color:var(--brick);font-weight:700">🧱 自前サイト</span>＝自分たちで作るページ／<span style="color:#635bff;font-weight:700">S Stripe</span>＝決済だけ任せる。Stripeは中央の「決済のみ」で、その前後はすべて自前サイトが担う。</p>
+
+    <div class="timing">
+      <h3>⏱ 3D空間への「反映タイミング」をどうするか</h3>
+      <p>支払い完了（Webhook→DB保存）のあと、3Dの壁に刻まれるまでの反映方法は3案。<b>おすすめは「本人は即・大画面は定期」の組み合わせ</b>。</p>
+      <div class="topts">
+        <div class="topt reco">
+          <span class="tt">本人：専用URLで即確認 <em>推奨</em></span>
+          <p>完了画面の“専用URL”を開くと最新データを取得。<b>自分のレンガはその場ですぐ見られる</b>（待ち時間なし）。</p>
+        </div>
+        <div class="topt reco">
+          <span class="tt">大画面：数分おきに自動更新 <em>推奨</em></span>
+          <p>常時稼働の大画面は bricks.json を<b>1〜5分おきに自動読み込み</b>。実装が単純で安定。新しいレンガは数分で反映。</p>
+        </div>
+        <div class="topt">
+          <span class="tt">将来：リアルタイム反映</span>
+          <p>Supabase Realtime 等で<b>即時に壁へ出す</b>ことも可能。演出を戻したくなったらここで対応（まずは不要）。</p>
+        </div>
+      </div>
+      <p class="tnote">→ たたき台の推奨：<b>本人＝即時（専用URL）／大画面＝数分おきのポーリング</b>。まずはこれで運用し、必要ならリアルタイム化を追加。</p>
+    </div>
   </section>
 
   <!-- 4. 企業フロー -->
