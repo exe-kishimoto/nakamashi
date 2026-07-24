@@ -485,6 +485,29 @@
     display:flex; align-items:center; gap:8px; justify-content:center}
   .adown::before,.adown::after{content:""; height:1px; width:40px; background:var(--line)}
 
+  /* ---- owner zones (自前/Stripe/3D を枠で囲う) ---- */
+  .zones{display:flex; flex-direction:column; margin-top:24px}
+  .zone{border:2px solid; border-radius:16px; padding:28px 16px 20px; position:relative}
+  .zone.own{border-color:color-mix(in srgb,var(--brick) 50%,var(--line));
+    background:color-mix(in srgb,var(--brick) 4%,transparent)}
+  .zone.stripe{border-color:color-mix(in srgb,#635bff 50%,var(--line));
+    background:color-mix(in srgb,#635bff 5%,transparent)}
+  .zone.d3{border-color:color-mix(in srgb,var(--slate) 50%,var(--line));
+    background:color-mix(in srgb,var(--slate) 5%,transparent)}
+  .zlabel{position:absolute; top:-14px; left:16px; padding:4px 14px; font-weight:800; font-size:.83rem;
+    border-radius:20px; display:inline-flex; align-items:center; gap:7px; border:2px solid;
+    background:var(--paper); white-space:nowrap}
+  .zone.own .zlabel{color:var(--brick); border-color:color-mix(in srgb,var(--brick) 50%,var(--line))}
+  .zone.stripe .zlabel{color:#635bff; border-color:color-mix(in srgb,#635bff 50%,var(--line))}
+  .zone.d3 .zlabel{color:var(--slate); border-color:color-mix(in srgb,var(--slate) 50%,var(--line))}
+  .zone .zlabel .stripe-mark{width:1.15em; height:1.15em; font-size:.85em}
+  .zrow{display:flex; flex-wrap:wrap; gap:22px 26px; justify-content:center; align-items:flex-start}
+  .zarrow{display:flex; align-items:center; justify-content:center; gap:9px; color:var(--ink-soft);
+    font-weight:700; font-size:.83rem; padding:12px 0; text-align:center}
+  .zarrow b{color:var(--brick)}
+  .zarrow::before{content:"↓"; font-size:1.35rem; color:var(--brick); line-height:1}
+  .zone .shot.wide{width:min(330px,100%)}
+
   /* theme toggle */
   .toggle{position:fixed; top:14px; right:14px; z-index:20;
     background:var(--card); border:1px solid var(--line); color:var(--ink-soft);
@@ -683,7 +706,10 @@
       <p class="kcap">大画面モニターのQRを、スマホでかざして読み取る<span>アプリのDL・ログインは不要。QRからそのまま寄付フォームへ。</span></p>
     </div>
 
-    <div class="gallery">
+    <div class="zones">
+
+      <div class="zone own"><span class="zlabel">🧱 自前サイト（自分たちで作るページ）</span>
+      <div class="zrow">
 
       <!-- 1. 入力フォーム -->
       <div class="shot">
@@ -706,7 +732,7 @@
       </div>
 
       <!-- 2. 金額選択 -->
-      <div class="shot s-stripe">
+      <div class="shot">
         <div class="phone"><div class="island"></div><div class="screen">
           <div class="sbar"><span>9:41</span><span class="sig">📶 🔋</span></div>
           <div class="shead">🧱 寄付金額をえらぶ</div>
@@ -725,6 +751,13 @@
           <p>「決済へすすむ」でStripeへ。</p>
           <span class="backend">裏側：サーバーがStripe決済を作成し、入力情報を metadata で添付</span></div>
       </div>
+
+      </div></div>
+
+      <div class="zarrow"><b>決済だけ</b> Stripe にわたす</div>
+
+      <div class="zone stripe"><span class="zlabel"><span class="stripe-mark">S</span> Stripe（決済のみ）</span>
+      <div class="zrow">
 
       <!-- 3. Stripe決済 -->
       <div class="shot s-stripe">
@@ -749,8 +782,15 @@
           <p>カード / Apple Pay / Google Pay。カード情報は自前サーバーを通らない。</p></div>
       </div>
 
+      </div></div>
+
+      <div class="zarrow">支払い成功で <b>自前サイトに戻る</b></div>
+
+      <div class="zone own"><span class="zlabel">🧱 自前サイト</span>
+      <div class="zrow">
+
       <!-- 4. 完了 -->
-      <div class="shot s-stripe">
+      <div class="shot">
         <div class="phone"><div class="island"></div><div class="screen">
           <div class="sbar"><span>9:41</span><span class="sig">📶 🔋</span></div>
           <div class="shead">🧱 お支払い完了</div>
@@ -767,6 +807,13 @@
           <span class="backend">裏側：決済成功のWebhook → DBに「寄付者＋レンガ」を保存（唯一の刻印確定点）</span></div>
       </div>
 
+      </div></div>
+
+      <div class="zarrow"><b>3D空間へ</b></div>
+
+      <div class="zone d3"><span class="zlabel">🏛️ 3D空間（既存Three.js）</span>
+      <div class="zrow">
+
       <!-- 5. 3D空間 -->
       <div class="shot s-3d">
         <div class="phone"><div class="island"></div><div class="playtag">▶ 演出（自動再生）</div><div class="screen">
@@ -781,17 +828,23 @@
           <p>壁へ飛び込み、自分のレンガが金色に輝く演出。<b>記念15秒動画（MP4）が自動生成</b>され、SNSでシェアできる。<br>※上の画面はループ演出のプレビュー。</p></div>
       </div>
 
+      </div></div>
     </div>
+
+    <p class="note"><b>色枠の見かた：</b><span style="color:var(--brick);font-weight:700">🧱 自前サイト</span>＝自分たちで作るページ／<span style="color:#635bff;font-weight:700">S Stripe</span>＝決済だけ任せる／<span style="color:var(--slate);font-weight:700">🏛️ 3D空間</span>＝既存Three.js。Stripeは中央の「決済のみ」で、その前後はすべて自前サイトが担う。</p>
   </section>
 
   <!-- 4. 企業フロー -->
   <section id="company">
     <h2><span class="num">04</span>企業フロー ― 申込 → 審査 → 後日掲載</h2>
     <p class="sub">企業は即時決済ではなく、<b>審査と請求を挟む</b>。掲載可否は市が最終判断。通常3営業日以内に担当から連絡。各ステップの画面イメージはこちら。</p>
-    <div class="gallery wide">
+    <div class="zones">
+
+      <div class="zone own"><span class="zlabel">🧱 自前サイト（自分たちで作るページ）</span>
+      <div class="zrow">
 
       <!-- 1. 申込フォーム -->
-      <div class="shot">
+      <div class="shot wide">
         <div class="win">
           <div class="wbar"><div class="wdots"><i style="background:#e8695f"></i><i style="background:#f4be4f"></i><i style="background:#61c554"></i></div>
             <div class="waddr">nakama1910.jp/sponsor</div></div>
@@ -809,7 +862,7 @@
       </div>
 
       <!-- 2. 審査 -->
-      <div class="shot">
+      <div class="shot wide">
         <div class="win">
           <div class="wbar"><div class="wdots"><i style="background:#e8695f"></i><i style="background:#f4be4f"></i><i style="background:#61c554"></i></div>
             <div class="waddr">admin.nakama1910.jp/review</div></div>
@@ -827,8 +880,15 @@
           <p>市が掲載基準に沿って承認／却下。掲載可否は市が最終判断。</p></div>
       </div>
 
+      </div></div>
+
+      <div class="zarrow"><b>請求だけ</b> Stripe にわたす</div>
+
+      <div class="zone stripe"><span class="zlabel"><span class="stripe-mark">S</span> Stripe（請求のみ）</span>
+      <div class="zrow">
+
       <!-- 3. 見積・請求 -->
-      <div class="shot s-stripe">
+      <div class="shot s-stripe wide">
         <div class="win">
           <div class="wbar"><div class="wdots"><i style="background:#e8695f"></i><i style="background:#f4be4f"></i><i style="background:#61c554"></i></div>
             <div class="waddr">🔒 stripe.com/invoice</div></div>
@@ -847,8 +907,15 @@
           <p>契約締結後、Stripe Invoice（請求書）や銀行振込で入金（方式は要確認）。</p></div>
       </div>
 
+      </div></div>
+
+      <div class="zarrow"><b>入金確認後</b>に掲載</div>
+
+      <div class="zone d3"><span class="zlabel">🏛️ 3D空間 ＆ Web（既存Three.js）</span>
+      <div class="zrow">
+
       <!-- 4. 掲載 -->
-      <div class="shot s-3d">
+      <div class="shot s-3d wide">
         <div class="scene">
           <span class="stag">🏛️ メタバース空間 ＆ Webサイト</span>
           <div class="cm">CM動画<small>15秒 自社紹介</small></div>
@@ -858,7 +925,10 @@
           <p>空間内にロゴ・銘板・CM動画を掲出。差し替えは管理画面から申請→承認。</p></div>
       </div>
 
+      </div></div>
     </div>
+
+    <p class="note"><b>色枠の見かた：</b>企業も入口は<span style="color:var(--brick);font-weight:700">🧱 自前サイト</span>（申込フォーム＋市の審査用の管理画面）。<span style="color:#635bff;font-weight:700">S Stripe</span>は請求だけを担い、入金確認後に<span style="color:var(--slate);font-weight:700">🏛️ 3D空間＆Web</span>へ掲載する。</p>
   </section>
 
   <!-- 5. Stripe核心 -->
